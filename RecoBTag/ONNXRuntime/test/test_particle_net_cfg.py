@@ -3,7 +3,9 @@ from PhysicsTools.PatAlgos.tools.helpers import getPatAlgosToolsTask
 
 from FWCore.ParameterSet.VarParsing import VarParsing
 options = VarParsing('analysis')
-options.inputFiles = '/store/mc/RunIIFall17MiniAODv2/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/MINIAODSIM/PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/90000/DCFE3F5F-AE42-E811-B6DB-008CFAF72A64.root'
+#options.inputFiles = '/store/mc/RunIIFall17MiniAODv2/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/MINIAODSIM/PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/90000/DCFE3F5F-AE42-E811-B6DB-008CFAF72A64.root'
+options.inputFiles = '/store/mc/RunIISummer19UL17MiniAOD/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/MINIAODSIM/106X_mc2017_realistic_v6-v4/30000/FFA0194D-1BBC-EF4F-9B8F-8FBED2C62FC8.root'
+#options.inputFiles = 'file:FFA0194D-1BBC-EF4F-9B8F-8FBED2C62FC8.root'
 options.maxEvents = 1000
 options.parseArguments()
 
@@ -67,4 +69,4 @@ process.out.outputCommands.append('keep *_selectedPatJets*_*_*')
 process.out.outputCommands.append('keep *_selectedUpdatedPatJets*_*_*')
 process.out.outputCommands.append('keep *_updatedPatJets*_*_*')
 
-process.out.fileName = 'test_particle_net_MINIAODSIM.root'
+process.out.fileName = 'test_particle_net_MINIAODSIM_noragged.root'
