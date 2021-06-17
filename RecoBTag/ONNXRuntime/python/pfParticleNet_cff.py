@@ -2,6 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 from RecoBTag.FeatureTools.pfDeepBoostedJetTagInfos_cfi import pfDeepBoostedJetTagInfos
 from RecoBTag.ONNXRuntime.boostedJetONNXJetTagsProducer_cfi import boostedJetONNXJetTagsProducer
+from RecoBTag.ONNXRuntime.particleNetSonicJetTagsProducer_cfi import particleNetSonicJetTagsProducer
 from RecoBTag.ONNXRuntime.pfParticleNetDiscriminatorsJetTags_cfi import pfParticleNetDiscriminatorsJetTags
 from RecoBTag.ONNXRuntime.pfMassDecorrelatedParticleNetDiscriminatorsJetTags_cfi import pfMassDecorrelatedParticleNetDiscriminatorsJetTags
 
@@ -14,6 +15,26 @@ pfParticleNetJetTags = boostedJetONNXJetTagsProducer.clone(
     preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/preprocess_noragged.json',
     #preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/preprocess.json',
     model_path = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/particle-net.onnx',
+    flav_names = ["probTbcq",  "probTbqq",  "probTbc",   "probTbq",  "probTbel", "probTbmu", "probTbta",
+                  "probWcq",   "probWqq",   "probZbb",   "probZcc",  "probZqq",  "probHbb", "probHcc",
+                  "probHqqqq", "probQCDbb", "probQCDcc", "probQCDb", "probQCDc", "probQCDothers"],
+)
+
+pfParticleNetSonicJetTags = particleNetSonicJetTagsProducer.clone(
+    src = 'pfParticleNetTagInfos',
+    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/preprocess_noragged.json',
+    #preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/preprocess.json',
+    Client = cms.PSet(
+        timeout = cms.untracked.uint32(300),
+        modelName = cms.string("particlenet"),
+        mode = cms.string("PseudoAsync"),
+        modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/particlenet/config.pbtxt"),
+        modelVersion = cms.string(""),
+        verbose = cms.untracked.bool(False),
+        allowedTries = cms.untracked.uint32(0),
+        #outputs = cms.untracked.vstring("output"),
+    ),
+    batchSize = cms.uint32(1),
     flav_names = ["probTbcq",  "probTbqq",  "probTbc",   "probTbq",  "probTbel", "probTbmu", "probTbta",
                   "probWcq",   "probWqq",   "probZbb",   "probZcc",  "probZqq",  "probHbb", "probHcc",
                   "probHqqqq", "probQCDbb", "probQCDcc", "probQCDb", "probQCDc", "probQCDothers"],
@@ -46,6 +67,9 @@ pfParticleNetTask = cms.Task(puppi, primaryVertexAssociation, pfParticleNetTagIn
 # nominal: probs
 _pfParticleNetJetTagsProbs = ['pfParticleNetJetTags:' + flav_name
                               for flav_name in pfParticleNetJetTags.flav_names]
+
+_pfParticleNetSonicJetTagsProbs  = ['pfParticleNetSonicJetTags:' + flav_name
+                                    for flav_name in pfParticleNetSonicJetTags.flav_names]
 # nominal: meta-taggers
 _pfParticleNetJetTagsMetaDiscrs = ['pfParticleNetDiscriminatorsJetTags:' + disc.name.value()
                                    for disc in pfParticleNetDiscriminatorsJetTags.discriminators]
