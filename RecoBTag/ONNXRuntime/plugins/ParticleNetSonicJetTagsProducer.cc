@@ -132,7 +132,7 @@ ParticleNetSonicJetTagsProducer::~ParticleNetSonicJetTagsProducer() {}
 void ParticleNetSonicJetTagsProducer::fillDescriptions(edm::ConfigurationDescriptions &descriptions) {
   // pfDeepBoostedJetTags
   edm::ParameterSetDescription desc;
-
+  TritonClient::fillPSetDescription(desc);
   desc.add<unsigned>("batchSize", 1);
   desc.add<edm::InputTag>("src", edm::InputTag("pfDeepBoostedJetTagInfos"));
   desc.add<std::string>("preprocess_json", "");
