@@ -55,14 +55,15 @@ private:
   std::vector<unsigned> input_sizes_;               // total length of each input vector
   std::unordered_map<std::string, PreprocessParams> prep_info_map_;  // preprocessing info for each input group
   unsigned batchSize_;
-
+  bool debug_ = false;
 };
 
 ParticleNetSonicJetTagsProducer::ParticleNetSonicJetTagsProducer(const edm::ParameterSet &iConfig)
     : TritonEDProducer<>(iConfig, "ParticleNetSonicJetTagsProducer"),
       src_(consumes<TagInfoCollection>(iConfig.getParameter<edm::InputTag>("src"))),
       flav_names_(iConfig.getParameter<std::vector<std::string>>("flav_names")),
-      batchSize_(iConfig.getParameter<unsigned>("batchSize")) {
+      batchSize_(iConfig.getParameter<unsigned>("batchSize")),
+      debug_(iConfig.getUntrackedParameter<bool>("debugMode", false)) {
   // load preprocessing info
   auto json_path = iConfig.getParameter<std::string>("preprocess_json");
   if (!json_path.empty()) {
@@ -120,6 +121,27 @@ ParticleNetSonicJetTagsProducer::ParticleNetSonicJetTagsProducer(const edm::Para
 
     }
   }
+  if (debug_) {
+    for (unsigned i = 0; i < input_names_.size(); ++i) {
+      const auto &group_name = input_names_.at(i);
+      if (!input_shapes_.empty()) {
+        std::cout << group_name << "\nshapes: ";
+        for (const auto &x : input_shapes_.at(i)) {
+          std::cout << x << ", ";
+        }
+      }
+      std::cout << "\nvariables: ";
+      for (const auto &x : prep_info_map_.at(group_name).var_names) {
+        std::cout << x << ", ";
+      }
+      std::cout << "\n";
+    }
+    std::cout << "flav_names: ";
+    for (const auto &flav_name : flav_names_) {
+      std::cout << flav_name << ", ";
+    }
+    std::cout << "\n";
+  }
 
   // get output names from flav_names
   for (const auto &flav_name : flav_names_) {
@@ -161,6 +183,7 @@ void ParticleNetSonicJetTagsProducer::fillDescriptions(edm::ConfigurationDescrip
                                          "probQCDc",
                                          "probQCDothers",
                                      });
+  desc.addOptionalUntracked<bool>("debugMode", false);
 
   descriptions.addWithDefaultLabel(desc);
 }
@@ -183,18 +206,33 @@ void ParticleNetSonicJetTagsProducer::produce(edm::Event &iEvent, const edm::Eve
       output_tags.emplace_back(std::make_unique<JetTagCollection>());
     }
   }
-    unsigned jet_n = 0;
-    const auto &taginfo = (*tag_infos)[jet_n];
-    std::vector<float> outputs(flav_names_.size(), 0);  // init as all zeros  
-    if (!taginfo.features().empty()) {
-      // run prediction and get outputs
-      const auto& output1 = iOutput.begin()->second;
-      const auto& outputs = output1.fromServer<float>()[0];
+    for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
+      const auto &taginfo = (*tag_infos)[jet_n];
+      std::vector<float> outputs(flav_names_.size(), 0);  // init as all zeros  
+      if (!taginfo.features().empty() && jet_n==0) {
+	// run prediction and get outputs
+	const auto& output1 = iOutput.begin()->second;
+	const auto& outputs_from_server = output1.fromServer<float>()[0];
+	std::copy(outputs_from_server.begin(), outputs_from_server.end(), outputs.begin());
+      }
+
+      const auto &jet_ref = tag_infos->at(jet_n).jet();
+      for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
+	(*(output_tags[flav_n]))[jet_ref] = outputs[flav_n];
+      }
     }
 
-    const auto &jet_ref = tag_infos->at(jet_n).jet();
-    for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
-      (*(output_tags[flav_n]))[jet_ref] = outputs[flav_n];
+    if (debug_) {
+      std::cout << "=== " << iEvent.id().run() << ":" << iEvent.id().luminosityBlock() << ":" << iEvent.id().event()
+		<< " ===" << std::endl;
+      for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
+	const auto &jet_ref = tag_infos->at(jet_n).jet();
+	std::cout << " - Jet #" << jet_n << ", pt=" << jet_ref->pt() << ", eta=" << jet_ref->eta()
+		  << ", phi=" << jet_ref->phi() << std::endl;
+	for (std::size_t flav_n = 0; flav_n < flav_names_.size(); ++flav_n) {
+	  std::cout << "    " << flav_names_.at(flav_n) << " = " << (*(output_tags.at(flav_n)))[jet_ref] << std::endl;
+	}
+      }
     }
 
   // put into the event
@@ -230,42 +268,49 @@ void ParticleNetSonicJetTagsProducer::acquire(edm::Event const& iEvent, edm::Eve
   client_->setBatchSize(batchSize_); 
   edm::Handle<TagInfoCollection> tag_infos;
   iEvent.getByToken(src_, tag_infos);
-
-  unsigned jet_n = 0;
-  const auto &taginfo = (*tag_infos)[jet_n];
-
-  for (unsigned igroup = 0; igroup < input_names_.size(); ++igroup) {
-    const auto &group_name = input_names_[igroup];
-    auto& input = iInput.at(group_name);
-    auto tdata = std::make_shared<TritonInput<float>>(1);
-    auto& vdata = (*tdata)[0];
-    vdata.reserve(input.sizeShape());
-
-    const auto &prep_params = prep_info_map_.at(group_name);
-    // first reset group_values to 0
-    std::fill(vdata.begin(), vdata.end(), 0);
-    unsigned curr_pos = 0;
-    // transform/pad
-    for (unsigned i = 0; i < prep_params.var_names.size(); ++i) {
-      const auto &varname = prep_params.var_names[i];
-      const auto &raw_value = taginfo.features().get(varname);
-      const auto &info = prep_params.info(varname);
-      auto val = center_norm_pad(raw_value,
-                                 info.center,
-                                 info.norm_factor,
-                                 prep_params.min_length,
-                                 prep_params.max_length,
-                                 info.pad,
-                                 info.replace_inf_value,
-                                 info.lower_bound,
-                                 info.upper_bound);
-      std::copy(val.begin(), val.end(), vdata.begin() + curr_pos);
-      curr_pos += val.size();
-      if (i == 0 && (!input_shapes_.empty())) {
-        input_shapes_[igroup][2] = val.size();
+  if (!tag_infos->empty()) {
+    unsigned jet_n = 0;
+    const auto &taginfo = (*tag_infos)[jet_n];
+    for (unsigned igroup = 0; igroup < input_names_.size(); ++igroup) {
+      const auto &group_name = input_names_[igroup];
+      auto& input = iInput.at(group_name);
+      auto tdata = std::make_shared<TritonInput<float>>(1);
+      auto& vdata = (*tdata)[0];
+      vdata.reserve(input.sizeShape());
+      
+      const auto &prep_params = prep_info_map_.at(group_name);
+      // first reset group_values to 0
+      std::fill(vdata.begin(), vdata.end(), 0);
+      unsigned curr_pos = 0;
+      // transform/pad
+      for (unsigned i = 0; i < prep_params.var_names.size(); ++i) {
+	const auto &varname = prep_params.var_names[i];
+	const auto &raw_value = taginfo.features().get(varname);
+	const auto &info = prep_params.info(varname);
+	auto val = center_norm_pad(raw_value,
+				   info.center,
+				   info.norm_factor,
+				   prep_params.min_length,
+				   prep_params.max_length,
+				   info.pad,
+				   info.replace_inf_value,
+				   info.lower_bound,
+				   info.upper_bound);
+	curr_pos += val.size();
+	if (i == 0 && (!input_shapes_.empty())) {
+	  input_shapes_[igroup][2] = val.size();
+	}
+	if (debug_) {
+	  std::cout << " -- var=" << varname << ", center=" << info.center << ", scale=" << info.norm_factor
+		    << ", replace=" << info.replace_inf_value << ", pad=" << info.pad << std::endl;
+	  for (const auto &v : val) {
+	    std::cout << v << ",";
+	  }
+	  std::cout << std::endl;
+	}
       }
+      input.toServer(tdata);
     }
-    input.toServer(tdata);
   }
 }
 
