@@ -14,7 +14,9 @@ cmssw_miniaod = "test_particle_net_MINIAODSIM_noragged.root"
 
 jetsLabel = "selectedUpdatedPatJets"
 
-from RecoBTag.ONNXRuntime.pfParticleNet_cff import _pfParticleNetJetTagsProbs as disc_names
+from RecoBTag.ONNXRuntime.pfParticleNet_cff import _pfParticleNetJetTagsProbs
+from RecoBTag.ONNXRuntime.pfParticleNet_cff import _pfParticleNetSonicJetTagsProbs
+disc_names = _pfParticleNetJetTagsProbs+_pfParticleNetSonicJetTagsProbs
 
 jet_pt = "fj_pt"
 jet_eta = "fj_eta"
@@ -51,7 +53,9 @@ for i, ev in enumerate(cmssw_evs):
 df_cmssw = pd.DataFrame(c_cmssw)
 df_cmssw.sort_values(['event_n', jet_pt], ascending=[True, False], inplace=True)
 df_cmssw.reset_index(drop=True)
-print(df_cmssw)
+print(df_cmssw[['event_n','fj_eta','fj_pt',
+                'pfParticleNetJetTags:probTbq','pfParticleNetSonicJetTags:probTbq',
+            ]])
 
 n_bins = 50
 
