@@ -3,8 +3,8 @@ from PhysicsTools.PatAlgos.tools.helpers import getPatAlgosToolsTask
 
 from FWCore.ParameterSet.VarParsing import VarParsing
 options = VarParsing('analysis')
-options.inputFiles = '/store/mc/RunIIFall17MiniAODv2/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/MINIAODSIM/PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/90000/DCFE3F5F-AE42-E811-B6DB-008CFAF72A64.root'
-#options.inputFiles = '/store/mc/RunIISummer19UL17MiniAOD/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/MINIAODSIM/106X_mc2017_realistic_v6-v4/30000/FFA0194D-1BBC-EF4F-9B8F-8FBED2C62FC8.root'
+#options.inputFiles = '/store/mc/RunIIFall17MiniAODv2/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/MINIAODSIM/PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/90000/DCFE3F5F-AE42-E811-B6DB-008CFAF72A64.root'
+options.inputFiles = '/store/mc/RunIISummer19UL17MiniAOD/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/MINIAODSIM/106X_mc2017_realistic_v6-v4/30000/FFA0194D-1BBC-EF4F-9B8F-8FBED2C62FC8.root'
 #options.inputFiles = 'file:FFA0194D-1BBC-EF4F-9B8F-8FBED2C62FC8.root'
 options.maxEvents = 100
 options.parseArguments()
@@ -14,7 +14,7 @@ process = cms.Process('PATtest',enableSonicTriton)
 
 ## MessageLogger
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
-process.MessageLogger.cerr.FwkReport.reportEvery = 100
+process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 
 ## Options and Output Report
@@ -30,10 +30,10 @@ process.maxEvents = cms.untracked.PSet(input=cms.untracked.int32(options.maxEven
 process.load("HeterogeneousCore.SonicTriton.TritonService_cff")
 process.TritonService.verbose = True
 # fallback server
-process.TritonService.fallback.enable = False
+process.TritonService.fallback.enable = True
 process.TritonService.fallback.verbose = True
-process.TritonService.fallback.useDocker = True
-process.TritonService.fallback.useGPU = True
+process.TritonService.fallback.useDocker = False
+process.TritonService.fallback.useGPU = False
 process.TritonService.servers.append(
     cms.PSet(
         name = cms.untracked.string("default"),
