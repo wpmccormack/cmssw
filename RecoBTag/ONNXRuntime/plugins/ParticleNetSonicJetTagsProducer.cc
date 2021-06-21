@@ -294,6 +294,7 @@ void ParticleNetSonicJetTagsProducer::acquire(edm::Event const &iEvent, edm::Eve
                                    info.replace_inf_value,
                                    info.lower_bound,
                                    info.upper_bound);
+	std::copy(val.begin(), val.end(), vdata.begin() + curr_pos);
         curr_pos += val.size();
         if (i == 0 && (!input_shapes_.empty())) {
           input_shapes_[igroup][2] = val.size();
