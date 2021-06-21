@@ -47,6 +47,7 @@ for i, ev in enumerate(cmssw_evs):
         discs = j.getPairDiscri()
         for d in discs:
             if d.first in disc_names:
+                if(ptRaw > 235. and ptRaw < 236.):
                 c_cmssw[d.first].append(d.second)
         n_jets +=1
         
