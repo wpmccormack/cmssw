@@ -4,7 +4,8 @@ from PhysicsTools.PatAlgos.tools.helpers import getPatAlgosToolsTask
 from FWCore.ParameterSet.VarParsing import VarParsing
 options = VarParsing('analysis')
 #options.inputFiles = '/store/mc/RunIIFall17MiniAODv2/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/MINIAODSIM/PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/90000/DCFE3F5F-AE42-E811-B6DB-008CFAF72A64.root'
-options.inputFiles = '/store/mc/RunIISummer19UL17MiniAOD/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/MINIAODSIM/106X_mc2017_realistic_v6-v4/30000/FFA0194D-1BBC-EF4F-9B8F-8FBED2C62FC8.root'
+options.inputFiles = 'file:/storage/local/data1/home/jduarte1/forPatrick/FFA0194D-1BBC-EF4F-9B8F-8FBED2C62FC8.root'
+#options.inputFiles = '/store/mc/RunIISummer19UL17MiniAOD/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/MINIAODSIM/106X_mc2017_realistic_v6-v4/30000/FFA0194D-1BBC-EF4F-9B8F-8FBED2C62FC8.root'
 #options.inputFiles = 'file:FFA0194D-1BBC-EF4F-9B8F-8FBED2C62FC8.root'
 options.maxEvents = 100
 options.parseArguments()
@@ -37,7 +38,8 @@ process.TritonService.fallback.useGPU = False
 process.TritonService.servers.append(
     cms.PSet(
         name = cms.untracked.string("default"),
-        address = cms.untracked.string("prp-gpu-1.t2.ucsd.edu"),
+        #address = cms.untracked.string("prp-gpu-1.t2.ucsd.edu"),
+        address = cms.untracked.string("ailab01.fnal.gov"),
         port = cms.untracked.uint32(8001),
     )
 )
