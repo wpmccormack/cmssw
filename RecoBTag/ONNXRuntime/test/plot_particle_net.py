@@ -36,7 +36,9 @@ for i, ev in enumerate(cmssw_evs):
     if (n_jets >= max_n_jets): break
     ev.getByLabel(jetsLabel, jetsHandle)
     jets = jetsHandle.product()
+    jetind = 0
     for i_j,j in enumerate(jets):
+        jetind+=1
         uncorr = j.jecFactor("Uncorrected")
         ptRaw = j.pt()*uncorr
         if ptRaw < 200.0 or abs(j.eta()) > 2.4: continue
@@ -47,7 +49,6 @@ for i, ev in enumerate(cmssw_evs):
         discs = j.getPairDiscri()
         for d in discs:
             if d.first in disc_names:
-                if(ptRaw > 235. and ptRaw < 236.):
                 c_cmssw[d.first].append(d.second)
         n_jets +=1
         

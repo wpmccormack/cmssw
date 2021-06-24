@@ -1,5 +1,4 @@
 <use name="DataFormats/BTauReco"/>
-<use name="HeterogeneousCore/SonicTriton"/>
 <export>
   <lib name="1"/>
 </export>

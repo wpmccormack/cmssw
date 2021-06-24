@@ -145,6 +145,7 @@ ParticleNetSonicJetTagsProducer::ParticleNetSonicJetTagsProducer(const edm::Para
   for (const auto &flav_name : flav_names_) {
     produces<JetTagCollection>(flav_name);
   }
+  //preprocessInfoLoader(&iConfig);
 }
 
 ParticleNetSonicJetTagsProducer::~ParticleNetSonicJetTagsProducer() {}
@@ -208,10 +209,12 @@ void ParticleNetSonicJetTagsProducer::produce(edm::Event &iEvent,
   for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
     const auto &taginfo = (*tag_infos)[jet_n];
     std::vector<float> outputs(flav_names_.size(), 0);  // init as all zeros
-    if (!taginfo.features().empty() && jet_n == 0) {
+    //if (!taginfo.features().empty() && jet_n == 0) {
+    if (!taginfo.features().empty()) {
       // run prediction and get outputs
       const auto &output1 = iOutput.begin()->second;
-      const auto &outputs_from_server = output1.fromServer<float>()[0];
+      const auto &outputs_from_server = output1.fromServer<float>()[jet_n];
+      //const auto &outputs_from_server = output1.fromServer<float>()[0];
       std::copy(outputs_from_server.begin(), outputs_from_server.end(), outputs.begin());
     }
 
@@ -263,50 +266,55 @@ std::vector<float> ParticleNetSonicJetTagsProducer::center_norm_pad(const std::v
 }
 
 void ParticleNetSonicJetTagsProducer::acquire(edm::Event const &iEvent, edm::EventSetup const &iSetup, Input &iInput) {
-  client_->setBatchSize(batchSize_);
   edm::Handle<TagInfoCollection> tag_infos;
   iEvent.getByToken(src_, tag_infos);
+  client_->setBatchSize(tag_infos->size());
+  //client_->setBatchSize(batchSize_);
   if (!tag_infos->empty()) {
-    unsigned jet_n = 0;
-    const auto &taginfo = (*tag_infos)[jet_n];
+    //unsigned jet_n = 0;
+    //const auto &taginfo = (*tag_infos)[jet_n];
     for (unsigned igroup = 0; igroup < input_names_.size(); ++igroup) {
       const auto &group_name = input_names_[igroup];
       auto &input = iInput.at(group_name);
-      auto tdata = std::make_shared<TritonInput<float>>(1);
-      auto &vdata = (*tdata)[0];
-      vdata.reserve(input.sizeShape());
-
-      const auto &prep_params = prep_info_map_.at(group_name);
-      // first reset group_values to 0
-      std::fill(vdata.begin(), vdata.end(), 0);
-      unsigned curr_pos = 0;
-      // transform/pad
-      for (unsigned i = 0; i < prep_params.var_names.size(); ++i) {
-        const auto &varname = prep_params.var_names[i];
-        const auto &raw_value = taginfo.features().get(varname);
-        const auto &info = prep_params.info(varname);
-        auto val = center_norm_pad(raw_value,
-                                   info.center,
-                                   info.norm_factor,
-                                   prep_params.min_length,
-                                   prep_params.max_length,
-                                   info.pad,
-                                   info.replace_inf_value,
-                                   info.lower_bound,
-                                   info.upper_bound);
-	std::copy(val.begin(), val.end(), vdata.begin() + curr_pos);
-        curr_pos += val.size();
-        if (i == 0 && (!input_shapes_.empty())) {
-          input_shapes_[igroup][2] = val.size();
-        }
-        if (debug_) {
-          std::cout << " -- var=" << varname << ", center=" << info.center << ", scale=" << info.norm_factor
-                    << ", replace=" << info.replace_inf_value << ", pad=" << info.pad << std::endl;
-          for (const auto &v : val) {
-            std::cout << v << ",";
-          }
-          std::cout << std::endl;
-        }
+      auto tdata = std::make_shared<TritonInput<float>>(tag_infos->size());
+      //auto tdata = std::make_shared<TritonInput<float>>(1);
+      for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n){
+	const auto &taginfo = (*tag_infos)[jet_n];
+	auto &vdata = (*tdata)[jet_n];
+	vdata.reserve(input.sizeShape());
+	
+	const auto &prep_params = prep_info_map_.at(group_name);
+	// first reset group_values to 0
+	std::fill(vdata.begin(), vdata.end(), 0);
+	unsigned curr_pos = 0;
+	// transform/pad
+	for (unsigned i = 0; i < prep_params.var_names.size(); ++i) {
+	  const auto &varname = prep_params.var_names[i];
+	  const auto &raw_value = taginfo.features().get(varname);
+	  const auto &info = prep_params.info(varname);
+	  auto val = center_norm_pad(raw_value,
+				     info.center,
+				     info.norm_factor,
+				     prep_params.min_length,
+				     prep_params.max_length,
+				     info.pad,
+				     info.replace_inf_value,
+				     info.lower_bound,
+				     info.upper_bound);
+	  std::copy(val.begin(), val.end(), vdata.begin() + curr_pos);
+	  curr_pos += val.size();
+	  if (i == 0 && (!input_shapes_.empty())) {
+	    input_shapes_[igroup][2] = val.size();
+	  }
+	  if (debug_) {
+	    std::cout << " -- var=" << varname << ", center=" << info.center << ", scale=" << info.norm_factor
+		      << ", replace=" << info.replace_inf_value << ", pad=" << info.pad << std::endl;
+	    for (const auto &v : val) {
+	      std::cout << v << ",";
+	    }
+	    std::cout << std::endl;
+	  }
+	}
       }
       input.toServer(tdata);
     }

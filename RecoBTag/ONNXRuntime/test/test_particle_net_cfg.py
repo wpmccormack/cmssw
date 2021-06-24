@@ -90,5 +90,3 @@ process.out.outputCommands.append('keep *_selectedUpdatedPatJets*_*_*')
 process.out.outputCommands.append('keep *_updatedPatJets*_*_*')
 
 process.out.fileName = 'test_particle_net_MINIAODSIM_noragged.root'
-
-

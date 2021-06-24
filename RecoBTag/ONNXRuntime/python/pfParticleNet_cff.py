@@ -6,6 +6,8 @@ from RecoBTag.ONNXRuntime.particleNetSonicJetTagsProducer_cfi import particleNet
 from RecoBTag.ONNXRuntime.pfParticleNetDiscriminatorsJetTags_cfi import pfParticleNetDiscriminatorsJetTags
 from RecoBTag.ONNXRuntime.pfMassDecorrelatedParticleNetDiscriminatorsJetTags_cfi import pfMassDecorrelatedParticleNetDiscriminatorsJetTags
 
+print('in pfParticleNet_cff?')
+
 pfParticleNetTagInfos = pfDeepBoostedJetTagInfos.clone(
     use_puppiP4 = False
 )
@@ -34,10 +36,11 @@ pfParticleNetSonicJetTags = particleNetSonicJetTagsProducer.clone(
         allowedTries = cms.untracked.uint32(0),
         #outputs = cms.untracked.vstring("output"),
     ),
-    batchSize = cms.uint32(1),
+    #batchSize = cms.uint32(1),
     flav_names = ["probTbcq",  "probTbqq",  "probTbc",   "probTbq",  "probTbel", "probTbmu", "probTbta",
                   "probWcq",   "probWqq",   "probZbb",   "probZcc",  "probZqq",  "probHbb", "probHcc",
                   "probHqqqq", "probQCDbb", "probQCDcc", "probQCDb", "probQCDc", "probQCDothers"],
+    debugMode = False,
 )
 
 pfMassDecorrelatedParticleNetJetTags = boostedJetONNXJetTagsProducer.clone(
