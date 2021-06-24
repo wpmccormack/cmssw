@@ -6,8 +6,6 @@ from RecoBTag.ONNXRuntime.particleNetSonicJetTagsProducer_cfi import particleNet
 from RecoBTag.ONNXRuntime.pfParticleNetDiscriminatorsJetTags_cfi import pfParticleNetDiscriminatorsJetTags
 from RecoBTag.ONNXRuntime.pfMassDecorrelatedParticleNetDiscriminatorsJetTags_cfi import pfMassDecorrelatedParticleNetDiscriminatorsJetTags
 
-print('in pfParticleNet_cff?')
-
 pfParticleNetTagInfos = pfDeepBoostedJetTagInfos.clone(
     use_puppiP4 = False
 )
