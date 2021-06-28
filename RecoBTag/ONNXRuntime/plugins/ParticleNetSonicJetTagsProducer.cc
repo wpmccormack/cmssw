@@ -14,6 +14,8 @@
 
 #include "HeterogeneousCore/SonicTriton/interface/TritonEDProducer.h"
 
+#include "HeterogeneousCore/SonicTriton/interface/TritonData.h"
+
 #include "RecoBTag/FeatureTools/interface/deep_helpers.h"
 
 #include <iostream>
@@ -221,8 +223,7 @@ void ParticleNetSonicJetTagsProducer::acquire(edm::Event const &iEvent, edm::Eve
     for (unsigned igroup = 0; igroup < input_names_.size(); ++igroup) {
       const auto &group_name = input_names_[igroup];
       auto &input = iInput.at(group_name);
-      auto tdata = std::make_shared<TritonInput<float>>(tag_infos->size());
-      //auto tdata = std::make_shared<TritonInput<float>>(1);
+      auto tdata = input.allocate<float>(true);
       for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n){
 	const auto &taginfo = (*tag_infos)[jet_n];
 	auto &vdata = (*tdata)[jet_n];
