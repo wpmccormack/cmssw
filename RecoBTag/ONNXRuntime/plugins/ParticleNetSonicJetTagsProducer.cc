@@ -56,6 +56,7 @@ private:
   std::unordered_map<std::string, PreprocessParams> prep_info_map_;  // preprocessing info for each input group
   unsigned batchSize_;
   bool debug_ = false;
+  int testint_;
 };
 
 ParticleNetSonicJetTagsProducer::ParticleNetSonicJetTagsProducer(const edm::ParameterSet &iConfig)
@@ -64,6 +65,8 @@ ParticleNetSonicJetTagsProducer::ParticleNetSonicJetTagsProducer(const edm::Para
       flav_names_(iConfig.getParameter<std::vector<std::string>>("flav_names")),
       batchSize_(iConfig.getParameter<unsigned>("batchSize")),
       debug_(iConfig.getUntrackedParameter<bool>("debugMode", false)) {
+  testset(&testint_, 6);
+  std::cout<<"PRINTING TESTINT "<<testint_<<std::endl;
   // load preprocessing info
   auto json_path = iConfig.getParameter<std::string>("preprocess_json");
   if (!json_path.empty()) {
@@ -187,62 +190,6 @@ void ParticleNetSonicJetTagsProducer::fillDescriptions(edm::ConfigurationDescrip
   descriptions.addWithDefaultLabel(desc);
 }
 
-void ParticleNetSonicJetTagsProducer::produce(edm::Event &iEvent,
-                                              const edm::EventSetup &iSetup,
-                                              Output const &iOutput) {
-  edm::Handle<TagInfoCollection> tag_infos;
-  iEvent.getByToken(src_, tag_infos);
-
-  // initialize output collection
-  std::vector<std::unique_ptr<JetTagCollection>> output_tags;
-  if (!tag_infos->empty()) {
-    auto jet_ref = tag_infos->begin()->jet();
-    auto ref2prod = edm::makeRefToBaseProdFrom(jet_ref, iEvent);
-    for (std::size_t i = 0; i < flav_names_.size(); i++) {
-      output_tags.emplace_back(std::make_unique<JetTagCollection>(ref2prod));
-    }
-  } else {
-    for (std::size_t i = 0; i < flav_names_.size(); i++) {
-      output_tags.emplace_back(std::make_unique<JetTagCollection>());
-    }
-  }
-  for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
-    const auto &taginfo = (*tag_infos)[jet_n];
-    std::vector<float> outputs(flav_names_.size(), 0);  // init as all zeros
-    //if (!taginfo.features().empty() && jet_n == 0) {
-    if (!taginfo.features().empty()) {
-      // run prediction and get outputs
-      const auto &output1 = iOutput.begin()->second;
-      const auto &outputs_from_server = output1.fromServer<float>()[jet_n];
-      //const auto &outputs_from_server = output1.fromServer<float>()[0];
-      std::copy(outputs_from_server.begin(), outputs_from_server.end(), outputs.begin());
-    }
-
-    const auto &jet_ref = tag_infos->at(jet_n).jet();
-    for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
-      (*(output_tags[flav_n]))[jet_ref] = outputs[flav_n];
-    }
-  }
-
-  if (debug_) {
-    std::cout << "=== " << iEvent.id().run() << ":" << iEvent.id().luminosityBlock() << ":" << iEvent.id().event()
-              << " ===" << std::endl;
-    for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
-      const auto &jet_ref = tag_infos->at(jet_n).jet();
-      std::cout << " - Jet #" << jet_n << ", pt=" << jet_ref->pt() << ", eta=" << jet_ref->eta()
-                << ", phi=" << jet_ref->phi() << std::endl;
-      for (std::size_t flav_n = 0; flav_n < flav_names_.size(); ++flav_n) {
-        std::cout << "    " << flav_names_.at(flav_n) << " = " << (*(output_tags.at(flav_n)))[jet_ref] << std::endl;
-      }
-    }
-  }
-
-  // put into the event
-  for (std::size_t flav_n = 0; flav_n < flav_names_.size(); ++flav_n) {
-    iEvent.put(std::move(output_tags[flav_n]), flav_names_[flav_n]);
-  }
-}
-
 std::vector<float> ParticleNetSonicJetTagsProducer::center_norm_pad(const std::vector<float> &input,
                                                                     float center,
                                                                     float norm_factor,
@@ -318,6 +265,69 @@ void ParticleNetSonicJetTagsProducer::acquire(edm::Event const &iEvent, edm::Eve
       }
       input.toServer(tdata);
     }
+  }
+}
+
+void ParticleNetSonicJetTagsProducer::produce(edm::Event &iEvent,
+                                              const edm::EventSetup &iSetup,
+                                              Output const &iOutput) {
+  edm::Handle<TagInfoCollection> tag_infos;
+  iEvent.getByToken(src_, tag_infos);
+
+  // initialize output collection
+  std::vector<std::unique_ptr<JetTagCollection>> output_tags;
+  if (!tag_infos->empty()) {
+    auto jet_ref = tag_infos->begin()->jet();
+    auto ref2prod = edm::makeRefToBaseProdFrom(jet_ref, iEvent);
+    for (std::size_t i = 0; i < flav_names_.size(); i++) {
+      output_tags.emplace_back(std::make_unique<JetTagCollection>(ref2prod));
+    }
+  } else {
+    for (std::size_t i = 0; i < flav_names_.size(); i++) {
+      output_tags.emplace_back(std::make_unique<JetTagCollection>());
+    }
+  }
+
+  if(tag_infos->size() > 0){
+    const auto &output1 = iOutput.begin()->second;
+    const auto &outputs_from_server = output1.fromServer<float>();
+    
+    for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
+      const auto &taginfo = (*tag_infos)[jet_n];
+      
+      if (!taginfo.features().empty()) {
+	
+	const auto &jet_ref = tag_infos->at(jet_n).jet();
+	for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
+	  (*(output_tags[flav_n]))[jet_ref] = outputs_from_server[jet_n][flav_n];
+	}
+      }
+      else {
+	const auto &jet_ref = tag_infos->at(jet_n).jet();
+	for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
+	  (*(output_tags[flav_n]))[jet_ref] = 0.;
+	}
+      }
+    }
+    
+  }
+  
+  if (debug_) {
+    std::cout << "=== " << iEvent.id().run() << ":" << iEvent.id().luminosityBlock() << ":" << iEvent.id().event()
+              << " ===" << std::endl;
+    for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
+      const auto &jet_ref = tag_infos->at(jet_n).jet();
+      std::cout << " - Jet #" << jet_n << ", pt=" << jet_ref->pt() << ", eta=" << jet_ref->eta()
+                << ", phi=" << jet_ref->phi() << std::endl;
+      for (std::size_t flav_n = 0; flav_n < flav_names_.size(); ++flav_n) {
+        std::cout << "    " << flav_names_.at(flav_n) << " = " << (*(output_tags.at(flav_n)))[jet_ref] << std::endl;
+      }
+    }
+  }
+
+  // put into the event
+  for (std::size_t flav_n = 0; flav_n < flav_names_.size(); ++flav_n) {
+    iEvent.put(std::move(output_tags[flav_n]), flav_names_[flav_n]);
   }
 }
 

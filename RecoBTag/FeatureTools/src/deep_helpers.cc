@@ -119,4 +119,11 @@ namespace btagbtvdeep {
     return int16_t((qualityFlags & lostInnerHitsMask) >> lostInnerHitsShift) - 1;
   }
 
+  void testset(int *classval, int setval){
+    std::cout<<"in testset classval = "<<*classval<<std::endl;
+    std::cout<<"in testset setval = "<<setval<<std::endl;
+    *classval = setval;
+    std::cout<<"in testset classval now? = "<<*classval<<std::endl;
+  }
+
 }  // namespace btagbtvdeep

@@ -102,5 +102,9 @@ namespace btagbtvdeep {
     VarInfo info(const std::string &name) const { return var_info_map.at(name); }
   };
 
+  void testset(int *classval, int setval);
+
+  //void loadPreprocessInfoJson( std::vector<std::string> *input_names, std::unordered_map<std::string, PreprocessParams> *prep_info_map, )
+
 }  // namespace btagbtvdeep
 #endif  //RecoBTag_FeatureTools_deep_helpers_h
