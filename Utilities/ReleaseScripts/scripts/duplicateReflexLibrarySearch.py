@@ -42,8 +42,8 @@ equivDict = \
          {'L1TrackTrigger'        : ['(TTStub|TTCluster|TTTrack).*Phase2TrackerDigi']},
          {'L1TCalorimeterPhase2'  : ['l1tp2::CaloTower.*']},
          {'L1TCalorimeter'        : ['l1t::CaloTower.*']},
+         {'VertexFinder'          : ['l1tVertexFinder::Vertex']},
          {'GsfTracking'           : ['reco::GsfTrack(Collection|).*(MomentumConstraint|VertexConstraint)', 'Trajectory.*reco::GsfTrack']},
-         {'ParallelAnalysis'      : ['examples::TrackAnalysisAlgorithm']},
          {'PatCandidates'         : ['pat::PATObject','pat::Lepton', 'reco::RecoCandidate','pat::[A-Za-z]+Ref(Vector|)', 'pat::UserHolder']},
          {'BTauReco'              : ['reco::.*SoftLeptonTagInfo', 'reco::SoftLeptonProperties','reco::SecondaryVertexTagInfo','reco::IPTagInfo','reco::TemplatedSecondaryVertexTagInfo', 'reco::CATopJetProperties','reco::HTTTopJetProperties']},
          {'CastorReco'            : ['reco::CastorJet']},
@@ -61,7 +61,7 @@ equivDict = \
          {'MuonReco'              : ['reco::Muon(Ref|)(Vector|)']},
          {'MuonSeed'              : ['L3MuonTrajectorySeed']},
          {'HepMCCandidate'        : ['reco::GenParticle.*']},
-         {'L1Trigger'             : ['l1extra::L1.+Particle']},
+         {'L1Trigger'             : ['l1extra::L1.+Particle', 'l1t::Vertex']},
          {'TrackInfo'             : ['reco::TrackingRecHitInfo']},
          {'EgammaCandidates'      : ['reco::GsfElectron.*','reco::Photon.*']},
          {'HcalIsolatedTrack'     : ['reco::IsolatedPixelTrackCandidate', 'reco::EcalIsolatedParticleCandidate', 'reco::HcalIsolatedTrackCandidate']},
@@ -205,7 +205,7 @@ def searchClassDefXml ():
             # skip complaining about this
             foundEquiv = False
             for equivRE in regexList:
-                #print "searching %s for %s" % (equivRE[1], className)
+                #print("searching %s for %s" % (equivRE[1], className))
                 if equivRE[0].search (className):
                     foundEquiv = True
                     break
