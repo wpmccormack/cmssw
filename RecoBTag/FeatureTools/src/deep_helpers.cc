@@ -119,4 +119,38 @@ namespace btagbtvdeep {
     return int16_t((qualityFlags & lostInnerHitsMask) >> lostInnerHitsShift) - 1;
   }
 
+  int center_norm_pad(const std::vector<float> &input,
+		      float center,
+		      float norm_factor,
+		      unsigned min_length,
+		      unsigned max_length,
+		      std::vector<float> *datavec,
+		      int startval,
+		      float pad_value,
+		      float replace_inf_value,
+		      float min,
+		      float max) {
+    // do variable shifting/scaling/padding/clipping in one go
+
+    assert(min <= pad_value && pad_value <= max);
+    assert(min_length <= max_length);
+    
+    unsigned target_length = std::clamp((unsigned)input.size(), min_length, max_length);
+    //std::vector<float> out(target_length, pad_value);
+    //for (unsigned i = 0; i < input.size() && i < target_length; ++i) {
+    for (unsigned i = 0; i < target_length; ++i) {
+      //out[i] = std::clamp((catch_infs(input[i], replace_inf_value) - center) * norm_factor, min, max);
+      //(*datavec)[i+startval] = std::clamp((catch_infs(input[i], replace_inf_value) - center) * norm_factor, min, max);
+      //datavec[i+startval] = 1;
+      if(i<input.size()){
+	(*datavec)[i+startval] = std::clamp((catch_infs(input[i], replace_inf_value) - center) * norm_factor, min, max);
+      }
+      else{
+	(*datavec)[i+startval] = pad_value;
+      }
+    }
+    //return out;
+    return target_length;
+  }
+
 }  // namespace btagbtvdeep

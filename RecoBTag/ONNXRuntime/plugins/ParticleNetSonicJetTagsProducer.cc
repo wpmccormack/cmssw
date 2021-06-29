@@ -39,15 +39,6 @@ private:
   typedef std::vector<reco::DeepBoostedJetTagInfo> TagInfoCollection;
   typedef reco::JetTagCollection JetTagCollection;
 
-  std::vector<float> center_norm_pad(const std::vector<float> &input,
-                                     float center,
-                                     float scale,
-                                     unsigned min_length,
-                                     unsigned max_length,
-                                     float pad_value = 0,
-                                     float replace_inf_value = 0,
-                                     float min = 0,
-                                     float max = -1);
   void make_inputs(const reco::DeepBoostedJetTagInfo &taginfo);
 
   const edm::EDGetTokenT<TagInfoCollection> src_;
@@ -190,36 +181,11 @@ void ParticleNetSonicJetTagsProducer::fillDescriptions(edm::ConfigurationDescrip
   descriptions.addWithDefaultLabel(desc);
 }
 
-std::vector<float> ParticleNetSonicJetTagsProducer::center_norm_pad(const std::vector<float> &input,
-                                                                    float center,
-                                                                    float norm_factor,
-                                                                    unsigned min_length,
-                                                                    unsigned max_length,
-                                                                    float pad_value,
-                                                                    float replace_inf_value,
-                                                                    float min,
-                                                                    float max) {
-  // do variable shifting/scaling/padding/clipping in one go
-
-  assert(min <= pad_value && pad_value <= max);
-  assert(min_length <= max_length);
-
-  unsigned target_length = std::clamp((unsigned)input.size(), min_length, max_length);
-  std::vector<float> out(target_length, pad_value);
-  for (unsigned i = 0; i < input.size() && i < target_length; ++i) {
-    out[i] = std::clamp((catch_infs(input[i], replace_inf_value) - center) * norm_factor, min, max);
-  }
-  return out;
-}
-
 void ParticleNetSonicJetTagsProducer::acquire(edm::Event const &iEvent, edm::EventSetup const &iSetup, Input &iInput) {
   edm::Handle<TagInfoCollection> tag_infos;
   iEvent.getByToken(src_, tag_infos);
   client_->setBatchSize(tag_infos->size());
-  //client_->setBatchSize(batchSize_);
   if (!tag_infos->empty()) {
-    //unsigned jet_n = 0;
-    //const auto &taginfo = (*tag_infos)[jet_n];
     for (unsigned igroup = 0; igroup < input_names_.size(); ++igroup) {
       const auto &group_name = input_names_[igroup];
       auto &input = iInput.at(group_name);
@@ -227,39 +193,38 @@ void ParticleNetSonicJetTagsProducer::acquire(edm::Event const &iEvent, edm::Eve
       for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n){
 	const auto &taginfo = (*tag_infos)[jet_n];
 	auto &vdata = (*tdata)[jet_n];
-	vdata.reserve(input.sizeShape());
-	
 	const auto &prep_params = prep_info_map_.at(group_name);
-	// first reset group_values to 0
-	std::fill(vdata.begin(), vdata.end(), 0);
 	unsigned curr_pos = 0;
 	// transform/pad
 	for (unsigned i = 0; i < prep_params.var_names.size(); ++i) {
 	  const auto &varname = prep_params.var_names[i];
 	  const auto &raw_value = taginfo.features().get(varname);
 	  const auto &info = prep_params.info(varname);
-	  auto val = center_norm_pad(raw_value,
+	  int insize = center_norm_pad(raw_value,
 				     info.center,
 				     info.norm_factor,
 				     prep_params.min_length,
 				     prep_params.max_length,
+				     &vdata,
+				     curr_pos,
 				     info.pad,
 				     info.replace_inf_value,
 				     info.lower_bound,
 				     info.upper_bound);
-	  std::copy(val.begin(), val.end(), vdata.begin() + curr_pos);
-	  curr_pos += val.size();
+	  curr_pos += insize;
 	  if (i == 0 && (!input_shapes_.empty())) {
-	    input_shapes_[igroup][2] = val.size();
+	    input_shapes_[igroup][2] = insize;
 	  }
+
 	  if (debug_) {
 	    std::cout << " -- var=" << varname << ", center=" << info.center << ", scale=" << info.norm_factor
 		      << ", replace=" << info.replace_inf_value << ", pad=" << info.pad << std::endl;
-	    for (const auto &v : val) {
-	      std::cout << v << ",";
+	    for(unsigned i = curr_pos - insize; i < curr_pos; i++){
+	      std::cout << vdata[i] << ",";
 	    }
 	    std::cout << std::endl;
 	  }
+
 	}
       }
       input.toServer(tdata);

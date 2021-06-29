@@ -102,5 +102,17 @@ namespace btagbtvdeep {
     VarInfo info(const std::string &name) const { return var_info_map.at(name); }
   };
 
+  int center_norm_pad(const std::vector<float> &input,
+                      float center,
+		      float scale,
+		      unsigned min_length,
+                      unsigned max_length,
+                      std::vector<float> *datavec,
+                      int startval,
+		      float pad_value = 0,
+		      float replace_inf_value = 0,
+		      float min = 0,
+		      float max = -1);
+
 }  // namespace btagbtvdeep
 #endif  //RecoBTag_FeatureTools_deep_helpers_h

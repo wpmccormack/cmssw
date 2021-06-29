@@ -32,7 +32,6 @@ pfParticleNetSonicJetTags = particleNetSonicJetTagsProducer.clone(
         modelVersion = cms.string(""),
         verbose = cms.untracked.bool(False),
         allowedTries = cms.untracked.uint32(0),
-        #outputs = cms.untracked.vstring("output"),
     ),
     batchSize = cms.uint32(1),
     flav_names = ["probTbcq",  "probTbqq",  "probTbc",   "probTbq",  "probTbel", "probTbmu", "probTbta",
