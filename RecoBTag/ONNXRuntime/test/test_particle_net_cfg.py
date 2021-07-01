@@ -33,8 +33,6 @@ process.TritonService.verbose = True
 # fallback server
 process.TritonService.fallback.enable = True
 process.TritonService.fallback.verbose = True
-#process.TritonService.fallback.useDocker = False
-#process.TritonService.fallback.useGPU = False
 process.TritonService.servers.append(
     cms.PSet(
         name = cms.untracked.string("default"),

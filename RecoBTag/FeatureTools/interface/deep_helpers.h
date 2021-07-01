@@ -15,6 +15,17 @@
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
 
+#include "FWCore/Framework/interface/Event.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+
+#include "PhysicsTools/ONNXRuntime/interface/ONNXRuntime.h"
+
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <numeric>
+#include <nlohmann/json.hpp>
+
 namespace btagbtvdeep {
 
   // remove infs and NaNs with value  (adapted from DeepNTuples)
@@ -104,15 +115,36 @@ namespace btagbtvdeep {
 
   int center_norm_pad(const std::vector<float> &input,
                       float center,
-		      float scale,
-		      unsigned min_length,
+                      float scale,
+                      unsigned min_length,
                       unsigned max_length,
-                      std::vector<float> *datavec,
+                      std::vector<float> &datavec,
                       int startval,
-		      float pad_value = 0,
-		      float replace_inf_value = 0,
-		      float min = 0,
-		      float max = -1);
+                      float pad_value = 0,
+                      float replace_inf_value = 0,
+                      float min = 0,
+                      float max = -1);
+
+  class ParticleNetConstructor {
+  public:
+    ParticleNetConstructor(const edm::ParameterSet &cfg,
+                           bool doExtra,
+                           std::vector<std::string> &inNames,
+                           std::unordered_map<std::string, PreprocessParams> &prepInfoMap,
+                           std::vector<std::vector<int64_t>> &inShapes)
+        : doData_(doExtra), Config_(cfg), input_names_(inNames), prep_info_map_(prepInfoMap), input_shapes_(inShapes) {}
+
+    cms::Ort::FloatArrays data_;
+    std::vector<unsigned> input_sizes_;
+    void constructParticleNet();
+
+  private:
+    bool doData_ = false;
+    const edm::ParameterSet &Config_;
+    std::vector<std::string> &input_names_;
+    std::unordered_map<std::string, PreprocessParams> &prep_info_map_;
+    std::vector<std::vector<int64_t>> &input_shapes_;
+  };
 
 }  // namespace btagbtvdeep
 #endif  //RecoBTag_FeatureTools_deep_helpers_h

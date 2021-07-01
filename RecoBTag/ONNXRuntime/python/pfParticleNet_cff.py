@@ -33,7 +33,6 @@ pfParticleNetSonicJetTags = particleNetSonicJetTagsProducer.clone(
         verbose = cms.untracked.bool(False),
         allowedTries = cms.untracked.uint32(0),
     ),
-    batchSize = cms.uint32(1),
     flav_names = ["probTbcq",  "probTbqq",  "probTbc",   "probTbq",  "probTbel", "probTbmu", "probTbta",
                   "probWcq",   "probWqq",   "probZbb",   "probZcc",  "probZqq",  "probHbb", "probHcc",
                   "probHqqqq", "probQCDbb", "probQCDcc", "probQCDb", "probQCDc", "probQCDothers"],
@@ -68,7 +67,7 @@ _pfParticleNetJetTagsProbs = ['pfParticleNetJetTags:' + flav_name
                               for flav_name in pfParticleNetJetTags.flav_names]
 
 _pfParticleNetSonicJetTagsProbs  = ['pfParticleNetSonicJetTags:' + flav_name
-                                    for flav_name in pfParticleNetSonicJetTags.flav_names]
+                                    for flav_name in pfParticleNetJetTags.flav_names]
 # nominal: meta-taggers
 _pfParticleNetJetTagsMetaDiscrs = ['pfParticleNetDiscriminatorsJetTags:' + disc.name.value()
                                    for disc in pfParticleNetDiscriminatorsJetTags.discriminators]
