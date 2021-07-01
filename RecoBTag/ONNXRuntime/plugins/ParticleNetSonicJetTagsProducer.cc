@@ -47,7 +47,6 @@ private:
   std::vector<std::vector<int64_t>> input_shapes_;  // shapes of each input group (-1 for dynamic axis)
   std::vector<unsigned> input_sizes_;               // total length of each input vector
   std::unordered_map<std::string, PreprocessParams> prep_info_map_;  // preprocessing info for each input group
-  unsigned batchSize_;
   bool debug_ = false;
 
   ParticleNetConstructor helper_;
@@ -57,11 +56,8 @@ ParticleNetSonicJetTagsProducer::ParticleNetSonicJetTagsProducer(const edm::Para
     : TritonEDProducer<>(iConfig, "ParticleNetSonicJetTagsProducer"),
       src_(consumes<TagInfoCollection>(iConfig.getParameter<edm::InputTag>("src"))),
       flav_names_(iConfig.getParameter<std::vector<std::string>>("flav_names")),
-      batchSize_(iConfig.getParameter<unsigned>("batchSize")),
       debug_(iConfig.getUntrackedParameter<bool>("debugMode", false)),
-      helper_(iConfig, false, input_names_, prep_info_map_, input_shapes_) {
-  helper_.constructParticleNet();
-
+      helper_(iConfig, false, input_names_, prep_info_map_, input_shapes_, input_sizes_, nullptr) {
   if (debug_) {
     for (unsigned i = 0; i < input_names_.size(); ++i) {
       const auto &group_name = input_names_.at(i);
@@ -97,7 +93,6 @@ void ParticleNetSonicJetTagsProducer::fillDescriptions(edm::ConfigurationDescrip
   // pfDeepBoostedJetTags
   edm::ParameterSetDescription desc;
   TritonClient::fillPSetDescription(desc);
-  desc.add<unsigned>("batchSize", 1);
   desc.add<edm::InputTag>("src", edm::InputTag("pfDeepBoostedJetTagInfos"));
   desc.add<std::string>("preprocess_json", "");
   // `preprocessParams` is deprecated -- use the preprocessing json file instead

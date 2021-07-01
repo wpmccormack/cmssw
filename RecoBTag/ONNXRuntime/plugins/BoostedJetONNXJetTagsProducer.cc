@@ -62,11 +62,7 @@ BoostedJetONNXJetTagsProducer::BoostedJetONNXJetTagsProducer(const edm::Paramete
     : src_(consumes<TagInfoCollection>(iConfig.getParameter<edm::InputTag>("src"))),
       flav_names_(iConfig.getParameter<std::vector<std::string>>("flav_names")),
       debug_(iConfig.getUntrackedParameter<bool>("debugMode", false)),
-      helper_(iConfig, true, input_names_, prep_info_map_, input_shapes_) {
-  helper_.constructParticleNet();
-  data_ = helper_.data_;
-  input_sizes_ = helper_.input_sizes_;
-
+      helper_(iConfig, true, input_names_, prep_info_map_, input_shapes_, input_sizes_, &data_) {
   if (debug_) {
     for (unsigned i = 0; i < input_names_.size(); ++i) {
       const auto &group_name = input_names_.at(i);
