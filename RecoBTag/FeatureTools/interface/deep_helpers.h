@@ -126,12 +126,12 @@ namespace btagbtvdeep {
                       float max = -1);
 
   void ParticleNetConstructor(const edm::ParameterSet &Config_,
-			      bool doExtra,
-			      std::vector<std::string> &input_names_,
-			      std::unordered_map<std::string, PreprocessParams> &prep_info_map_,
-			      std::vector<std::vector<int64_t>> &input_shapes_,
-			      std::vector<unsigned> &input_sizes_,
-			      cms::Ort::FloatArrays *data_);
+                              bool doExtra,
+                              std::vector<std::string> &input_names_,
+                              std::unordered_map<std::string, PreprocessParams> &prep_info_map_,
+                              std::vector<std::vector<int64_t>> &input_shapes_,
+                              std::vector<unsigned> &input_sizes_,
+                              cms::Ort::FloatArrays *data_);
 
 }  // namespace btagbtvdeep
 #endif  //RecoBTag_FeatureTools_deep_helpers_h

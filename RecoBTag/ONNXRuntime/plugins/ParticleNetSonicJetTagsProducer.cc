@@ -48,14 +48,13 @@ private:
   std::vector<unsigned> input_sizes_;               // total length of each input vector
   std::unordered_map<std::string, PreprocessParams> prep_info_map_;  // preprocessing info for each input group
   bool debug_ = false;
-
 };
 
 ParticleNetSonicJetTagsProducer::ParticleNetSonicJetTagsProducer(const edm::ParameterSet &iConfig)
     : TritonEDProducer<>(iConfig, "ParticleNetSonicJetTagsProducer"),
       src_(consumes<TagInfoCollection>(iConfig.getParameter<edm::InputTag>("src"))),
       flav_names_(iConfig.getParameter<std::vector<std::string>>("flav_names")),
-      debug_(iConfig.getUntrackedParameter<bool>("debugMode", false)){
+      debug_(iConfig.getUntrackedParameter<bool>("debugMode", false)) {
   ParticleNetConstructor(iConfig, false, input_names_, prep_info_map_, input_shapes_, input_sizes_, nullptr);
 
   if (debug_) {
@@ -202,7 +201,7 @@ void ParticleNetSonicJetTagsProducer::produce(edm::Event &iEvent,
     for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
       const auto &taginfo = (*tag_infos)[jet_n];
       const auto &jet_ref = tag_infos->at(jet_n).jet();
-      
+
       if (!taginfo.features().empty()) {
         for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
           (*(output_tags[flav_n]))[jet_ref] = outputs_from_server[jet_n][flav_n];
