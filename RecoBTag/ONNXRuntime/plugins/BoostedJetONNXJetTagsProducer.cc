@@ -55,14 +55,14 @@ private:
 
   bool debug_ = false;
 
-  ParticleNetConstructor helper_;
 };
 
 BoostedJetONNXJetTagsProducer::BoostedJetONNXJetTagsProducer(const edm::ParameterSet &iConfig, const ONNXRuntime *cache)
     : src_(consumes<TagInfoCollection>(iConfig.getParameter<edm::InputTag>("src"))),
       flav_names_(iConfig.getParameter<std::vector<std::string>>("flav_names")),
-      debug_(iConfig.getUntrackedParameter<bool>("debugMode", false)),
-      helper_(iConfig, true, input_names_, prep_info_map_, input_shapes_, input_sizes_, &data_) {
+      debug_(iConfig.getUntrackedParameter<bool>("debugMode", false)){
+  ParticleNetConstructor(iConfig, true, input_names_, prep_info_map_, input_shapes_, input_sizes_, &data_);
+
   if (debug_) {
     for (unsigned i = 0; i < input_names_.size(); ++i) {
       const auto &group_name = input_names_.at(i);
