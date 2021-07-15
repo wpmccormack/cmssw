@@ -8,4 +8,4 @@ namespace deepmet_helper {
     return ret_val;
   }
 
-}
+}  // namespace deepmet_helper
