@@ -8,44 +8,37 @@
 #include "DataFormats/PatCandidates/interface/MET.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "HeterogeneousCore/SonicTriton/interface/TritonEDProducer.h"
+#include "RecoMET/METPUSubtraction/interface/DeepMETHelp.h"
+
+using namespace deepmet_helper;
 
 class DeepMETSonicProducer : public TritonEDProducer<> {
 public:
-  explicit DeepMETSonicProducer(const edm::ParameterSet& cfg)
-      : TritonEDProducer<>(cfg, "DeepMETSonicProducer"),
-        pfName_(cfg.getParameter<edm::InputTag>("pf_src")),
-        pf_token_(consumes<std::vector<pat::PackedCandidate>>(pfName_)),
-        norm_(50.0),
-        ignore_leptons_(false),
-        max_n_pf_(4500),
-        px_leptons_(0),
-        py_leptons_(0) {
-    produces<pat::METCollection>();
-  }
+  explicit DeepMETSonicProducer(const edm::ParameterSet&);
   void acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) override;
   void produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) override;
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
-  float scale_and_rm_outlier(float val, float scale);
 
 private:
-  edm::InputTag pfName_;
   const edm::EDGetTokenT<std::vector<pat::PackedCandidate>> pf_token_;
   const float norm_;
   const bool ignore_leptons_;
   const unsigned int max_n_pf_;
+  const bool debug_;
+  const float scale_;
   float px_leptons_;
   float py_leptons_;
-
-  inline static const std::unordered_map<int, int32_t> charge_embedding_{{-1, 0}, {0, 1}, {1, 2}};
-  inline static const std::unordered_map<int, int32_t> pdg_id_embedding_{
-      {-211, 0}, {-13, 1}, {-11, 2}, {0, 3}, {1, 4}, {2, 5}, {11, 6}, {13, 7}, {22, 8}, {130, 9}, {211, 10}};
 };
 
-float DeepMETSonicProducer::scale_and_rm_outlier(float val, float scale) {
-  float ret_val = val * scale;
-  if (ret_val > 1e6 || ret_val < -1e6)
-    return 0.;
-  return ret_val;
+DeepMETSonicProducer::DeepMETSonicProducer(const edm::ParameterSet& cfg)
+    : TritonEDProducer<>(cfg, "DeepMETSonicProducer"),
+      pf_token_(consumes<std::vector<pat::PackedCandidate>>(cfg.getParameter<edm::InputTag>("pf_src"))),
+      norm_(cfg.getParameter<double>("norm_factor")),
+      ignore_leptons_(cfg.getParameter<bool>("ignore_leptons")),
+      max_n_pf_(cfg.getParameter<unsigned int>("max_n_pf")),
+      debug_(cfg.getUntrackedParameter<bool>("debugMode", false)),
+      scale_(1.0 / norm_) {
+  produces<pat::METCollection>();
 }
 
 void DeepMETSonicProducer::acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) {
@@ -53,7 +46,6 @@ void DeepMETSonicProducer::acquire(edm::Event const& iEvent, edm::EventSetup con
   client_->setBatchSize(1);
   px_leptons_ = 0.;
   py_leptons_ = 0.;
-  const float scale = 1. / norm_;
 
   auto const& pfs = iEvent.get(pf_token_);
 
@@ -89,14 +81,14 @@ void DeepMETSonicProducer::acquire(edm::Event const& iEvent, edm::EventSetup con
     vpfdata.push_back(pf.dz());
     vpfdata.push_back(pf.eta());
     vpfdata.push_back(pf.mass());
-    vpfdata.push_back(scale_and_rm_outlier(pf.pt(), scale));
+    vpfdata.push_back(scale_and_rm_outlier(pf.pt(), scale_));
     vpfdata.push_back(pf.puppiWeight());
-    vpfdata.push_back(scale_and_rm_outlier(pf.px(), scale));
-    vpfdata.push_back(scale_and_rm_outlier(pf.py(), scale));
+    vpfdata.push_back(scale_and_rm_outlier(pf.px(), scale_));
+    vpfdata.push_back(scale_and_rm_outlier(pf.py(), scale_));
 
-    vpfchg.push_back(charge_embedding_.at(pf.charge()));
+    vpfchg.push_back(charge_embedding.at(pf.charge()));
 
-    vpfpdgId.push_back(pdg_id_embedding_.at(pf.pdgId()));
+    vpfpdgId.push_back(pdg_id_embedding.at(pf.pdgId()));
 
     vpffromPV.push_back(pf.fromPV());
 
@@ -107,15 +99,11 @@ void DeepMETSonicProducer::acquire(edm::Event const& iEvent, edm::EventSetup con
   }
 
   // fill the remaining with zeros
-  while (i_pf < 4500) {
-    for (int i = 0; i < 8; i++) {
-      vpfdata.push_back(0.);
-    }
-    vpfchg.push_back(0);
-    vpfpdgId.push_back(0);
-    vpffromPV.push_back(0);
-    i_pf++;
-  }
+  // resize the vector to 4500 for zero-padding
+  vpfdata.resize(8 * max_n_pf_);
+  vpfchg.resize(max_n_pf_);
+  vpfpdgId.resize(max_n_pf_);
+  vpffromPV.resize(max_n_pf_);
 
   input.toServer(pfdata);
   input_cat0.toServer(pfchg);
@@ -135,6 +123,10 @@ void DeepMETSonicProducer::produce(edm::Event& iEvent, edm::EventSetup const& iS
   px -= px_leptons_;
   py -= py_leptons_;
 
+  if (debug_) {
+    std::cout << "MET from DeepMET Sonic Producer is MET_x " << px << " and MET_y " << py << std::endl;
+  }
+
   auto pf_mets = std::make_unique<pat::METCollection>();
   const reco::Candidate::LorentzVector p4(px, py, 0., std::hypot(px, py));
   pf_mets->emplace_back(reco::MET(p4, {}));
@@ -144,8 +136,11 @@ void DeepMETSonicProducer::produce(edm::Event& iEvent, edm::EventSetup const& iS
 void DeepMETSonicProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   TritonClient::fillPSetDescription(desc);
-  desc.add<unsigned>("batchSize", 1);
   desc.add<edm::InputTag>("pf_src");
+  desc.add<bool>("ignore_leptons", false);
+  desc.add<double>("norm_factor", 50.);
+  desc.add<unsigned int>("max_n_pf", 4500);
+  desc.addOptionalUntracked<bool>("debugMode", false);
   descriptions.add("deepMETSonicProducer", desc);
 }
 
