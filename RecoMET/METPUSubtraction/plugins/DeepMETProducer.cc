@@ -119,7 +119,7 @@ void DeepMETProducer::produce(edm::Event& event, const edm::EventSetup& setup) {
   py -= py_leptons;
 
   if (debug_) {
-    std::cout << "MET from DeepMET Sonic Producer is MET_x " << px << " and MET_y " << py << std::endl;
+    std::cout << "MET from DeepMET Producer is MET_x " << px << " and MET_y " << py << std::endl;
   }
 
   auto pf_mets = std::make_unique<pat::METCollection>();
