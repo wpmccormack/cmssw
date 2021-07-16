@@ -1,8 +1,6 @@
-//#include "RecoTauTag/RecoTau/interface/DeepTauBase.h"
 #include "FWCore/Utilities/interface/isFinite.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "DataFormats/TauReco/interface/PFTauTransverseImpactParameterAssociation.h"
-#include "DataFormats/PatCandidates/interface/PATTauDiscriminator.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/ESHandle.h"
@@ -31,13 +29,11 @@
 #include "DataFormats/Provenance/interface/ProductProvenance.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryID.h"
 #include "FWCore/Common/interface/Provenance.h"
-#include <TF1.h>
 #include <map>
 
 #include "RecoTauTag/RecoTau/interface/DeepTauBase.h"
 
 #include <fstream>
-#include "tbb/concurrent_unordered_set.h"
 
 #include <vector>
 
@@ -46,6 +42,7 @@ namespace deep_tau {
 }
 
 using namespace deep_tau_2017;
+using namespace deeptau_helper;
 
 class DeepTauIdSonicProducer : public TritonEDProducer<> {
 public:
@@ -70,7 +67,7 @@ public:
         disable_hcalFraction_workaround_(cfg.getParameter<bool>("disable_hcalFraction_workaround")),
         disable_CellIndex_workaround_(cfg.getParameter<bool>("disable_CellIndex_workaround")),
         json_file_(nullptr),
-        outputdiscs_(GetOutputDiscs()) {
+        outputdiscs_(GetOutputs()) {
     for (const auto& output_desc : outputdiscs_) {
       produces<TauDiscriminator>(output_desc.first);
       const auto& cut_list = cfg.getParameter<std::vector<std::string>>(output_desc.first + "WP");
@@ -126,7 +123,7 @@ public:
   using WPList = deep_tau::DeepTauBase::WPList;
   using BasicDiscriminator = deep_tau::DeepTauBase::BasicDiscriminator;
   using PATTauDiscInfo = deep_tau::DeepTauBase::TauDiscInfo<pat::PATTauDiscriminator>;
-  using OutputDisc = deep_tau::DeepTauBase::Output;
+  using OutputCollection = deep_tau::DeepTauBase::OutputCollection;
 
   void acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) override;
   void produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) override;
@@ -134,21 +131,9 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
   float scale_and_rm_outlier(float val, float scale);
 
-  using OutputDiscCollection = std::map<std::string, OutputDisc>;
-
   // select boolean operation on prediscriminants (and = 0x01, or = 0x00)
   uint8_t andPrediscriminants_;
   std::vector<PATTauDiscInfo> patPrediscriminants_;
-
-  static const OutputDiscCollection& GetOutputDiscs() {
-    static constexpr size_t e_index = 0, mu_index = 1, tau_index = 2, jet_index = 3;
-    static const OutputDiscCollection outputdiscs_ = {
-        {"VSe", OutputDisc({tau_index}, {e_index, tau_index})},
-        {"VSmu", OutputDisc({tau_index}, {mu_index, tau_index})},
-        {"VSjet", OutputDisc({tau_index}, {jet_index, tau_index})},
-    };
-    return outputdiscs_;
-  }
 
 private:
   edm::EDGetTokenT<TauCollection> tausToken_;
@@ -170,63 +155,12 @@ private:
   std::ofstream* json_file_;
   bool is_first_block_;
 
-  OutputDiscCollection outputdiscs_;
+  OutputCollection outputdiscs_;
   std::map<std::string, WPList> workingPoints_;
 
   std::vector<size_t> tau_indices_;
 
   static constexpr float pi = M_PI;
-  static constexpr float default_value = -999.;
-
-  template <typename T>
-  static float getValue(T value) {
-    return std::isnormal(value) ? static_cast<float>(value) : 0.f;
-  }
-
-  template <typename T>
-  static float getValueLinear(T value, float min_value, float max_value, bool positive) {
-    const float fixed_value = getValue(value);
-    const float clamped_value = std::clamp(fixed_value, min_value, max_value);
-    float transformed_value = (clamped_value - min_value) / (max_value - min_value);
-    if (!positive)
-      transformed_value = transformed_value * 2 - 1;
-    return transformed_value;
-  }
-
-  template <typename T>
-  static float getValueNorm(T value, float mean, float sigma, float n_sigmas_max = 5) {
-    const float fixed_value = getValue(value);
-    const float norm_value = (fixed_value - mean) / sigma;
-    return std::clamp(norm_value, -n_sigmas_max, n_sigmas_max);
-  }
-
-  static bool isAbove(double value, double min) { return std::isnormal(value) && value > min; }
-
-  static bool calculateElectronClusterVarsV2(const pat::Electron& ele,
-                                             float& cc_ele_energy,
-                                             float& cc_gamma_energy,
-                                             int& cc_n_gamma) {
-    cc_ele_energy = cc_gamma_energy = 0;
-    cc_n_gamma = 0;
-    const auto& superCluster = ele.superCluster();
-    if (superCluster.isNonnull() && superCluster.isAvailable() && superCluster->clusters().isNonnull() &&
-        superCluster->clusters().isAvailable()) {
-      for (auto iter = superCluster->clustersBegin(); iter != superCluster->clustersEnd(); ++iter) {
-        const float energy = static_cast<float>((*iter)->energy());
-        if (iter == superCluster->clustersBegin())
-          cc_ele_energy += energy;
-        else {
-          cc_gamma_energy += energy;
-          ++cc_n_gamma;
-        }
-      }
-      return true;
-    } else
-      return false;
-  }
-
-  //boolean to check if discriminator indices are already mapped
-  bool discrIndicesMapped_ = false;
   std::map<BasicDiscriminator, size_t> basicDiscrIndexMap_;
   std::map<BasicDiscriminator, size_t> basicDiscrdR03IndexMap_;
 
@@ -319,50 +253,6 @@ private:
                           std::vector<float>& muonBlockInputs,
                           std::vector<float>& hadronBlockInputs,
                           std::vector<int>& GridposInputs);
-
-  static double getInnerSignalConeRadius(double pt) {
-    static constexpr double min_pt = 30., min_radius = 0.05, cone_opening_coef = 3.;
-    // This is equivalent of the original formula (std::max(std::min(0.1, 3.0/pt), 0.05)
-    return std::max(cone_opening_coef / std::max(pt, min_pt), min_radius);
-  }
-
-  // Copied from https://github.com/cms-sw/cmssw/blob/CMSSW_9_4_X/RecoTauTag/RecoTau/plugins/PATTauDiscriminationByMVAIsolationRun2.cc#L218
-  template <typename TauCastType>
-  static bool calculateGottfriedJacksonAngleDifference(const TauCastType& tau,
-                                                       const size_t tau_index,
-                                                       double& gj_diff,
-                                                       TauFunc tau_funcs) {
-    if (tau_funcs.getHasSecondaryVertex(tau, tau_index)) {
-      static constexpr double mTau = 1.77682;
-      const double mAOne = tau.p4().M();
-      const double pAOneMag = tau.p();
-      const double argumentThetaGJmax = (std::pow(mTau, 2) - std::pow(mAOne, 2)) / (2 * mTau * pAOneMag);
-      const double argumentThetaGJmeasured = tau.p4().Vect().Dot(tau_funcs.getFlightLength(tau, tau_index)) /
-                                             (pAOneMag * tau_funcs.getFlightLength(tau, tau_index).R());
-      if (std::abs(argumentThetaGJmax) <= 1. && std::abs(argumentThetaGJmeasured) <= 1.) {
-        double thetaGJmax = std::asin(argumentThetaGJmax);
-        double thetaGJmeasured = std::acos(argumentThetaGJmeasured);
-        gj_diff = thetaGJmeasured - thetaGJmax;
-        return true;
-      }
-    }
-    return false;
-  }
-
-  template <typename TauCastType>
-  static float calculateGottfriedJacksonAngleDifference(const TauCastType& tau,
-                                                        const size_t tau_index,
-                                                        TauFunc tau_funcs) {
-    double gj_diff;
-    if (calculateGottfriedJacksonAngleDifference(tau, tau_index, gj_diff, tau_funcs))
-      return static_cast<float>(gj_diff);
-    return default_value;
-  }
-
-  static bool isInEcalCrack(double eta) {
-    const double abs_eta = std::abs(eta);
-    return abs_eta > 1.46 && abs_eta < 1.558;
-  }
 };
 
 void DeepTauIdSonicProducer::acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) {
@@ -425,8 +315,7 @@ void DeepTauIdSonicProducer::acquire(edm::Event const& iEvent, edm::EventSetup c
 
   for (size_t tau_index = 0; tau_index < taus->size(); ++tau_index) {
     const edm::RefToBase<reco::BaseTau> tauRef = taus->refAt(tau_index);
-    bool passesPrediscriminants = true;
-    passesPrediscriminants =
+    bool passesPrediscriminants =
         tauIDs.passPrediscriminants<std::vector<PATTauDiscInfo>>(patPrediscriminants_, andPrediscriminants_, tauRef);
     if (!passesPrediscriminants)
       continue;
@@ -611,7 +500,7 @@ void DeepTauIdSonicProducer::acquire(edm::Event const& iEvent, edm::EventSetup c
 
 void DeepTauIdSonicProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) {
   if (tau_indices_.empty()) {
-    std::cout << "no tau sent to the server; skip this event in produce" << std::endl;
+    edm::LogInfo("DeepTauIdSonicProducer") << "no tau sent to the server; skip this event in produce";
     return;
   }
   edm::Handle<TauCollection> taus;
@@ -628,6 +517,8 @@ void DeepTauIdSonicProducer::produce(edm::Event& iEvent, edm::EventSetup const& 
     std::copy(outputs_tauval[0].begin() + deep_tau::NumberOfOutputs * itau_passed,
               outputs_tauval[0].begin() + deep_tau::NumberOfOutputs * (itau_passed + 1),
               pred_all[tau_index].begin());
+    for (unsigned k = 0; k < deep_tau::NumberOfOutputs; ++k) 
+        std::cout << "tau index " << tau_index << " k " << k << " pred " << outputs_tauval[0][deep_tau::NumberOfOutputs * itau_passed + k] << std::endl;
   }
 
   createOutputs(iEvent, pred_all, taus);

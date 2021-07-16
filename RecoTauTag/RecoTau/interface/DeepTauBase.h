@@ -178,6 +178,8 @@ namespace deep_tau {
 }  // namespace deep_tau
 
 namespace deep_tau_2017 {
+  // namespace for the orignal anomalous namespace
+  // in the DeepTauId.cc
   struct dnn_inputs_2017v1 {
     enum vars {
       pt = 0,
@@ -1113,5 +1115,79 @@ namespace deep_tau_2017 {
     const bool disable_CellIndex_workaround_;
   };
 }  // namespace deep_tau_2017
+
+namespace deeptau_helper {
+  // namespace to store shared functions between DeepTauIdProducer and DeepTauIDSonicProducer
+  static constexpr float pi = M_PI;
+  static constexpr float default_value = -999.;
+
+  const deep_tau::DeepTauBase::OutputCollection& GetOutputs();
+
+  template <typename T>
+  float getValue(T value) {
+    return std::isnormal(value) ? static_cast<float>(value) : 0.f;
+  }
+
+  template <typename T>
+  float getValueLinear(T value, float min_value, float max_value, bool positive) {
+    const float fixed_value = getValue(value);
+    const float clamped_value = std::clamp(fixed_value, min_value, max_value);
+    float transformed_value = (clamped_value - min_value) / (max_value - min_value);
+    if (!positive)
+      transformed_value = transformed_value * 2 - 1;
+    return transformed_value;
+  }
+
+  template <typename T>
+  float getValueNorm(T value, float mean, float sigma, float n_sigmas_max = 5) {
+    const float fixed_value = getValue(value);
+    const float norm_value = (fixed_value - mean) / sigma;
+    return std::clamp(norm_value, -n_sigmas_max, n_sigmas_max);
+  }
+
+  bool isAbove(double value, double min);
+
+  bool calculateElectronClusterVarsV2(const pat::Electron& ele,
+                                             float& cc_ele_energy,
+                                             float& cc_gamma_energy,
+                                             int& cc_n_gamma);
+
+  double getInnerSignalConeRadius(double pt);
+
+  // Copied from https://github.com/cms-sw/cmssw/blob/CMSSW_9_4_X/RecoTauTag/RecoTau/plugins/PATTauDiscriminationByMVAIsolationRun2.cc#L218
+  template <typename TauCastType>
+  bool calculateGottfriedJacksonAngleDifference(const TauCastType& tau,
+                                                       const size_t tau_index,
+                                                       double& gj_diff,
+                                                       deep_tau_2017::TauFunc tau_funcs) {
+    if (tau_funcs.getHasSecondaryVertex(tau, tau_index)) {
+      static constexpr double mTau = 1.77682;
+      const double mAOne = tau.p4().M();
+      const double pAOneMag = tau.p();
+      const double argumentThetaGJmax = (std::pow(mTau, 2) - std::pow(mAOne, 2)) / (2 * mTau * pAOneMag);
+      const double argumentThetaGJmeasured = tau.p4().Vect().Dot(tau_funcs.getFlightLength(tau, tau_index)) /
+                                             (pAOneMag * tau_funcs.getFlightLength(tau, tau_index).R());
+      if (std::abs(argumentThetaGJmax) <= 1. && std::abs(argumentThetaGJmeasured) <= 1.) {
+        double thetaGJmax = std::asin(argumentThetaGJmax);
+        double thetaGJmeasured = std::acos(argumentThetaGJmeasured);
+        gj_diff = thetaGJmeasured - thetaGJmax;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  template <typename TauCastType>
+  float calculateGottfriedJacksonAngleDifference(const TauCastType& tau,
+                                                        const size_t tau_index,
+                                                        deep_tau_2017::TauFunc tau_funcs) {
+    double gj_diff;
+    if (calculateGottfriedJacksonAngleDifference(tau, tau_index, gj_diff, tau_funcs))
+      return static_cast<float>(gj_diff);
+    return default_value;
+  }
+
+  bool isInEcalCrack(double eta);
+}
 
 #endif

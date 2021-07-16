@@ -35,7 +35,7 @@ class TauIDEmbedder(object):
                     }
                  },
                  tauIdDiscrMVA_2017_version = "v1",
-                 conditionDB = "" # preparational DB: 'frontier://FrontierPrep/CMS_CONDITIONS'
+                 conditionDB = "", # preparational DB: 'frontier://FrontierPrep/CMS_CONDITIONS'
                  useSonic = False
                  ):
         super(TauIDEmbedder, self).__init__()

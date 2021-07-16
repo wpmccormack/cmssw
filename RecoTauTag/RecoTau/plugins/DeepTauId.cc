@@ -14,6 +14,7 @@ namespace deep_tau {
 }
 
 using namespace deep_tau_2017;
+using namespace deeptau_helper;
 
 using bd = deep_tau::DeepTauBase::BasicDiscriminator;
 const std::map<bd, std::string> deep_tau::DeepTauBase::stringFromDiscriminator_{
@@ -36,18 +37,6 @@ const std::vector<bd> deep_tau::DeepTauBase::requiredBasicDiscriminatorsdR03_ = 
 
 class DeepTauId : public deep_tau::DeepTauBase {
 public:
-  static constexpr float default_value = -999.;
-
-  static const OutputCollection& GetOutputs() {
-    static constexpr size_t e_index = 0, mu_index = 1, tau_index = 2, jet_index = 3;
-    static const OutputCollection outputs_ = {
-        {"VSe", Output({tau_index}, {e_index, tau_index})},
-        {"VSmu", Output({tau_index}, {mu_index, tau_index})},
-        {"VSjet", Output({tau_index}, {jet_index, tau_index})},
-    };
-    return outputs_;
-  }
-
   const std::map<BasicDiscriminator, size_t> matchDiscriminatorIndices(
       edm::Event& event,
       edm::EDGetTokenT<reco::TauDiscriminatorContainer> discriminatorContainerToken,
@@ -190,55 +179,6 @@ public:
   static void globalEndJob(const deep_tau::DeepTauCache* cache_) { return DeepTauBase::globalEndJob(cache_); }
 
 private:
-  static constexpr float pi = M_PI;
-
-  template <typename T>
-  static float getValue(T value) {
-    return std::isnormal(value) ? static_cast<float>(value) : 0.f;
-  }
-
-  template <typename T>
-  static float getValueLinear(T value, float min_value, float max_value, bool positive) {
-    const float fixed_value = getValue(value);
-    const float clamped_value = std::clamp(fixed_value, min_value, max_value);
-    float transformed_value = (clamped_value - min_value) / (max_value - min_value);
-    if (!positive)
-      transformed_value = transformed_value * 2 - 1;
-    return transformed_value;
-  }
-
-  template <typename T>
-  static float getValueNorm(T value, float mean, float sigma, float n_sigmas_max = 5) {
-    const float fixed_value = getValue(value);
-    const float norm_value = (fixed_value - mean) / sigma;
-    return std::clamp(norm_value, -n_sigmas_max, n_sigmas_max);
-  }
-
-  static bool isAbove(double value, double min) { return std::isnormal(value) && value > min; }
-
-  static bool calculateElectronClusterVarsV2(const pat::Electron& ele,
-                                             float& cc_ele_energy,
-                                             float& cc_gamma_energy,
-                                             int& cc_n_gamma) {
-    cc_ele_energy = cc_gamma_energy = 0;
-    cc_n_gamma = 0;
-    const auto& superCluster = ele.superCluster();
-    if (superCluster.isNonnull() && superCluster.isAvailable() && superCluster->clusters().isNonnull() &&
-        superCluster->clusters().isAvailable()) {
-      for (auto iter = superCluster->clustersBegin(); iter != superCluster->clustersEnd(); ++iter) {
-        const float energy = static_cast<float>((*iter)->energy());
-        if (iter == superCluster->clustersBegin())
-          cc_ele_energy += energy;
-        else {
-          cc_gamma_energy += energy;
-          ++cc_n_gamma;
-        }
-      }
-      return true;
-    } else
-      return false;
-  }
-
   inline void checkInputs(const tensorflow::Tensor& inputs,
                           const std::string& block_name,
                           int n_inputs,
@@ -466,6 +406,7 @@ private:
           if (!(pred >= 0 && pred <= 1))
             throw cms::Exception("DeepTauId")
                 << "invalid prediction = " << pred << " for tau_index = " << tau_index << ", pred_index = " << k;
+          std::cout << "tau_index " << tau_index << " k " << k << " pred " << pred << std::endl;
           predictions.matrix<float>()(tau_index, k) = pred;
         }
       }
@@ -1668,50 +1609,6 @@ private:
     d_eta = n != 0 ? dEta(p4, tau.p4()) : default_value;
     d_phi = n != 0 ? dPhi(p4, tau.p4()) : default_value;
     m = n != 0 ? p4.mass() : default_value;
-  }
-
-  static double getInnerSignalConeRadius(double pt) {
-    static constexpr double min_pt = 30., min_radius = 0.05, cone_opening_coef = 3.;
-    // This is equivalent of the original formula (std::max(std::min(0.1, 3.0/pt), 0.05)
-    return std::max(cone_opening_coef / std::max(pt, min_pt), min_radius);
-  }
-
-  // Copied from https://github.com/cms-sw/cmssw/blob/CMSSW_9_4_X/RecoTauTag/RecoTau/plugins/PATTauDiscriminationByMVAIsolationRun2.cc#L218
-  template <typename TauCastType>
-  static bool calculateGottfriedJacksonAngleDifference(const TauCastType& tau,
-                                                       const size_t tau_index,
-                                                       double& gj_diff,
-                                                       TauFunc tau_funcs) {
-    if (tau_funcs.getHasSecondaryVertex(tau, tau_index)) {
-      static constexpr double mTau = 1.77682;
-      const double mAOne = tau.p4().M();
-      const double pAOneMag = tau.p();
-      const double argumentThetaGJmax = (std::pow(mTau, 2) - std::pow(mAOne, 2)) / (2 * mTau * pAOneMag);
-      const double argumentThetaGJmeasured = tau.p4().Vect().Dot(tau_funcs.getFlightLength(tau, tau_index)) /
-                                             (pAOneMag * tau_funcs.getFlightLength(tau, tau_index).R());
-      if (std::abs(argumentThetaGJmax) <= 1. && std::abs(argumentThetaGJmeasured) <= 1.) {
-        double thetaGJmax = std::asin(argumentThetaGJmax);
-        double thetaGJmeasured = std::acos(argumentThetaGJmeasured);
-        gj_diff = thetaGJmeasured - thetaGJmax;
-        return true;
-      }
-    }
-    return false;
-  }
-
-  template <typename TauCastType>
-  static float calculateGottfriedJacksonAngleDifference(const TauCastType& tau,
-                                                        const size_t tau_index,
-                                                        TauFunc tau_funcs) {
-    double gj_diff;
-    if (calculateGottfriedJacksonAngleDifference(tau, tau_index, gj_diff, tau_funcs))
-      return static_cast<float>(gj_diff);
-    return default_value;
-  }
-
-  static bool isInEcalCrack(double eta) {
-    const double abs_eta = std::abs(eta);
-    return abs_eta > 1.46 && abs_eta < 1.558;
   }
 
   template <typename TauCastType>

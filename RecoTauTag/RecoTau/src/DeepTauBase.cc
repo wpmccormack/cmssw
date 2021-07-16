@@ -374,3 +374,51 @@ namespace deep_tau_2017 {
   }
 
 }  // namespace deep_tau_2017
+
+namespace deeptau_helper {
+  const deep_tau::DeepTauBase::OutputCollection& GetOutputs() {
+    static constexpr size_t e_index = 0, mu_index = 1, tau_index = 2, jet_index = 3;
+    static const deep_tau::DeepTauBase::OutputCollection outputs_ = {
+        {"VSe", deep_tau::DeepTauBase::Output({tau_index}, {e_index, tau_index})},
+        {"VSmu", deep_tau::DeepTauBase::Output({tau_index}, {mu_index, tau_index})},
+        {"VSjet", deep_tau::DeepTauBase::Output({tau_index}, {jet_index, tau_index})},
+    };
+    return outputs_;
+  }
+
+  bool isAbove(double value, double min) { return std::isnormal(value) && value > min; }
+
+  bool calculateElectronClusterVarsV2(const pat::Electron& ele,
+                                             float& cc_ele_energy,
+                                             float& cc_gamma_energy,
+                                             int& cc_n_gamma) {
+    cc_ele_energy = cc_gamma_energy = 0;
+    cc_n_gamma = 0;
+    const auto& superCluster = ele.superCluster();
+    if (superCluster.isNonnull() && superCluster.isAvailable() && superCluster->clusters().isNonnull() &&
+        superCluster->clusters().isAvailable()) {
+      for (auto iter = superCluster->clustersBegin(); iter != superCluster->clustersEnd(); ++iter) {
+        const float energy = static_cast<float>((*iter)->energy());
+        if (iter == superCluster->clustersBegin())
+          cc_ele_energy += energy;
+        else {
+          cc_gamma_energy += energy;
+          ++cc_n_gamma;
+        }
+      }
+      return true;
+    } else
+      return false;
+  }
+
+  double getInnerSignalConeRadius(double pt) {
+    static constexpr double min_pt = 30., min_radius = 0.05, cone_opening_coef = 3.;
+    // This is equivalent of the original formula (std::max(std::min(0.1, 3.0/pt), 0.05)
+    return std::max(cone_opening_coef / std::max(pt, min_pt), min_radius);
+  }
+
+  bool isInEcalCrack(double eta) {
+    const double abs_eta = std::abs(eta);
+    return abs_eta > 1.46 && abs_eta < 1.558;
+  }
+}
