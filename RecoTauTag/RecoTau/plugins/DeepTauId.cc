@@ -437,7 +437,7 @@ private:
                         const reco::Vertex& pv,
                         double rho,
                         std::vector<tensorflow::Tensor>& pred_vector,
-                        TauFunc tau_funcs) {
+                        const TauFunc& tau_funcs) {
     if (debug_level >= 2) {
       std::cout << "<DeepTauId::getPredictionsV2 (moduleLabel = " << moduleDescription().moduleLabel()
                 << ")>:" << std::endl;
@@ -549,43 +549,6 @@ private:
     }
   }
 
-  template <typename Collection, typename TauCastType>
-  void fillGrids(const TauCastType& tau, const Collection& objects, CellGrid& inner_grid, CellGrid& outer_grid) {
-    static constexpr double outer_dR2 = 0.25;  //0.5^2
-    const double inner_radius = getInnerSignalConeRadius(tau.polarP4().pt());
-    const double inner_dR2 = std::pow(inner_radius, 2);
-
-    const auto addObject = [&](size_t n, double deta, double dphi, CellGrid& grid) {
-      const auto& obj = objects.at(n);
-      const CellObjectType obj_type = GetCellObjectType(obj);
-      if (obj_type == CellObjectType::Other)
-        return;
-      CellIndex cell_index;
-      if (grid.tryGetCellIndex(deta, dphi, cell_index)) {
-        Cell& cell = grid[cell_index];
-        auto iter = cell.find(obj_type);
-        if (iter != cell.end()) {
-          const auto& prev_obj = objects.at(iter->second);
-          if (obj.polarP4().pt() > prev_obj.polarP4().pt())
-            iter->second = n;
-        } else {
-          cell[obj_type] = n;
-        }
-      }
-    };
-
-    for (size_t n = 0; n < objects.size(); ++n) {
-      const auto& obj = objects.at(n);
-      const double deta = obj.polarP4().eta() - tau.polarP4().eta();
-      const double dphi = reco::deltaPhi(obj.polarP4().phi(), tau.polarP4().phi());
-      const double dR2 = std::pow(deta, 2) + std::pow(dphi, 2);
-      if (dR2 < inner_dR2)
-        addObject(n, deta, dphi, inner_grid);
-      if (dR2 < outer_dR2)
-        addObject(n, deta, dphi, outer_grid);
-    }
-  }
-
   tensorflow::Tensor getPartialPredictions(bool is_inner) {
     std::vector<tensorflow::Tensor> pred_vector;
     if (is_inner) {
@@ -620,7 +583,7 @@ private:
                           const std::vector<pat::Muon>* muons,
                           const edm::View<reco::Candidate>& pfCands,
                           const CellGrid& grid,
-                          TauFunc tau_funcs,
+                          const TauFunc& tau_funcs,
                           bool is_inner) {
     if (debug_level >= 2) {
       std::cout << "<DeepTauId::createConvFeatures (is_inner = " << is_inner << ")>:" << std::endl;
@@ -708,7 +671,7 @@ private:
                             const edm::RefToBase<reco::BaseTau> tau_ref,
                             const reco::Vertex& pv,
                             double rho,
-                            TauFunc tau_funcs) {
+                            const TauFunc& tau_funcs) {
     namespace dnn = dnn_inputs_2017_v2::TauBlockInputs;
 
     tensorflow::Tensor& inputs = *tauBlockTensor_;
@@ -818,7 +781,7 @@ private:
                                const std::vector<pat::Electron>* electrons,
                                const edm::View<reco::Candidate>& pfCands,
                                const Cell& cell_map,
-                               TauFunc tau_funcs,
+                               const TauFunc& tau_funcs,
                                bool is_inner) {
     namespace dnn = dnn_inputs_2017_v2::EgammaBlockInputs;
 
@@ -1054,7 +1017,7 @@ private:
                              const std::vector<pat::Muon>* muons,
                              const edm::View<reco::Candidate>& pfCands,
                              const Cell& cell_map,
-                             TauFunc tau_funcs,
+                             const TauFunc& tau_funcs,
                              bool is_inner) {
     namespace dnn = dnn_inputs_2017_v2::MuonBlockInputs;
 
@@ -1204,7 +1167,7 @@ private:
                                 double rho,
                                 const edm::View<reco::Candidate>& pfCands,
                                 const Cell& cell_map,
-                                TauFunc tau_funcs,
+                                const TauFunc& tau_funcs,
                                 bool is_inner) {
     namespace dnn = dnn_inputs_2017_v2::HadronBlockInputs;
 

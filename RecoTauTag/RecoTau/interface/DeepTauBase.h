@@ -702,18 +702,18 @@ namespace deep_tau_2017 {
     }
     auto getFlightLengthSig(const pat::Tau& tau, const size_t tau_index) const { return tau.flightLengthSig(); }
 
-    auto getLeadingTrackNormChi2(const reco::PFTau& tau) { return reco::tau::lead_track_chi2(tau); }
-    auto getLeadingTrackNormChi2(const pat::Tau& tau) { return tau.leadingTrackNormChi2(); }
-    auto getEmFraction(const pat::Tau& tau) { return tau.emFraction_MVA(); }
-    auto getEmFraction(const reco::PFTau& tau) { return tau.emFraction(); }
-    auto getEtaAtEcalEntrance(const pat::Tau& tau) { return tau.etaAtEcalEntranceLeadChargedCand(); }
-    auto getEtaAtEcalEntrance(const reco::PFTau& tau) {
+    auto getLeadingTrackNormChi2(const reco::PFTau& tau) const { return reco::tau::lead_track_chi2(tau); }
+    auto getLeadingTrackNormChi2(const pat::Tau& tau) const { return tau.leadingTrackNormChi2(); }
+    auto getEmFraction(const pat::Tau& tau) const { return tau.emFraction_MVA(); }
+    auto getEmFraction(const reco::PFTau& tau) const { return tau.emFraction(); }
+    auto getEtaAtEcalEntrance(const pat::Tau& tau) const { return tau.etaAtEcalEntranceLeadChargedCand(); }
+    auto getEtaAtEcalEntrance(const reco::PFTau& tau) const {
       return tau.leadPFChargedHadrCand()->positionAtECALEntrance().eta();
     }
-    auto getEcalEnergyLeadingChargedHadr(const reco::PFTau& tau) { return tau.leadPFChargedHadrCand()->ecalEnergy(); }
-    auto getEcalEnergyLeadingChargedHadr(const pat::Tau& tau) { return tau.ecalEnergyLeadChargedHadrCand(); }
-    auto getHcalEnergyLeadingChargedHadr(const reco::PFTau& tau) { return tau.leadPFChargedHadrCand()->hcalEnergy(); }
-    auto getHcalEnergyLeadingChargedHadr(const pat::Tau& tau) { return tau.hcalEnergyLeadChargedHadrCand(); }
+    auto getEcalEnergyLeadingChargedHadr(const reco::PFTau& tau) const { return tau.leadPFChargedHadrCand()->ecalEnergy(); }
+    auto getEcalEnergyLeadingChargedHadr(const pat::Tau& tau) const { return tau.ecalEnergyLeadChargedHadrCand(); }
+    auto getHcalEnergyLeadingChargedHadr(const reco::PFTau& tau) const { return tau.leadPFChargedHadrCand()->hcalEnergy(); }
+    auto getHcalEnergyLeadingChargedHadr(const pat::Tau& tau) const { return tau.hcalEnergyLeadChargedHadrCand(); }
 
     template <typename PreDiscrType>
     bool passPrediscriminants(const PreDiscrType prediscriminants,
@@ -1188,6 +1188,54 @@ namespace deeptau_helper {
   }
 
   bool isInEcalCrack(double eta);
+
+  template <typename Collection, typename TauCastType>
+  void fillGrids(const TauCastType& tau, const Collection& objects, deep_tau_2017::CellGrid& inner_grid, deep_tau_2017::CellGrid& outer_grid) {
+    static constexpr double outer_dR2 = 0.25;  //0.5^2
+    const double inner_radius = getInnerSignalConeRadius(tau.polarP4().pt());
+    const double inner_dR2 = std::pow(inner_radius, 2);
+
+    const auto addObject = [&](size_t n, double deta, double dphi, deep_tau_2017::CellGrid& grid) {
+      const auto& obj = objects.at(n);
+      const deep_tau_2017::CellObjectType obj_type = deep_tau_2017::GetCellObjectType(obj);
+      if (obj_type == deep_tau_2017::CellObjectType::Other)
+        return;
+      deep_tau_2017::CellIndex cell_index;
+      if (grid.tryGetCellIndex(deta, dphi, cell_index)) {
+        deep_tau_2017::Cell& cell = grid[cell_index];
+        auto iter = cell.find(obj_type);
+        if (iter != cell.end()) {
+          const auto& prev_obj = objects.at(iter->second);
+          if (obj.polarP4().pt() > prev_obj.polarP4().pt())
+            iter->second = n;
+        } else {
+          cell[obj_type] = n;
+        }
+      }
+    };
+
+    for (size_t n = 0; n < objects.size(); ++n) {
+      const auto& obj = objects.at(n);
+      const double deta = obj.polarP4().eta() - tau.polarP4().eta();
+      const double dphi = reco::deltaPhi(obj.polarP4().phi(), tau.polarP4().phi());
+      const double dR2 = std::pow(deta, 2) + std::pow(dphi, 2);
+      if (dR2 < inner_dR2)
+        addObject(n, deta, dphi, inner_grid);
+      if (dR2 < outer_dR2)
+        addObject(n, deta, dphi, outer_grid);
+    }
+  }
+
+  template <typename CandidateCastType, typename TauCastType>
+  void createTauBlockInputs(const TauCastType& tau,
+                            const size_t& tau_index,
+                            const edm::RefToBase<reco::BaseTau> tau_ref,
+                            const reco::Vertex& pv,
+                            double rho,
+                            const TauFunc& tau_funcs,
+                            std::vector<float>& tauBlockInputs) {
+
+  }
 }
 
 #endif

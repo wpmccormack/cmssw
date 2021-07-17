@@ -173,7 +173,7 @@ private:
                         const edm::View<reco::Candidate>& pfCands,
                         const reco::Vertex& pv,
                         double rho,
-                        TauFunc tau_funcs,
+                        const TauFunc& tau_funcs,
                         std::vector<float>& tauBlockInputs,
                         std::vector<float>& egammaInnerBlockInputs,
                         std::vector<float>& muonInnerBlockInputs,
@@ -184,16 +184,13 @@ private:
                         std::vector<int>& innerGridposInputs,
                         std::vector<int>& outerGridposInputs);
 
-  template <typename Collection, typename TauCastType>
-  void fillGrids(const TauCastType& tau, const Collection& objects, CellGrid& inner_grid, CellGrid& outer_grid);
-
   template <typename CandidateCastType, typename TauCastType>
   void createTauBlockInputs(const TauCastType& tau,
                             const size_t& tau_index,
                             const edm::RefToBase<reco::BaseTau> tau_ref,
                             const reco::Vertex& pv,
                             double rho,
-                            TauFunc tau_funcs,
+                            const TauFunc& tau_funcs,
                             std::vector<float>& tauBlockInputs);
 
   template <typename CandidateCastType, typename TauCastType>
@@ -206,7 +203,7 @@ private:
                                const std::vector<pat::Electron>* electrons,
                                const edm::View<reco::Candidate>& pfCands,
                                const Cell& cell_map,
-                               TauFunc tau_funcs,
+                               const TauFunc& tau_funcs,
                                bool is_inner,
                                std::vector<float>& egammaBlockInputs);
 
@@ -220,7 +217,7 @@ private:
                              const std::vector<pat::Muon>* muons,
                              const edm::View<reco::Candidate>& pfCands,
                              const Cell& cell_map,
-                             TauFunc tau_funcs,
+                             const TauFunc& tau_funcs,
                              bool is_inner,
                              std::vector<float>& muonBlockInputs);
 
@@ -233,7 +230,7 @@ private:
                                 double rho,
                                 const edm::View<reco::Candidate>& pfCands,
                                 const Cell& cell_map,
-                                TauFunc tau_funcs,
+                                const TauFunc& tau_funcs,
                                 bool is_inner,
                                 std::vector<float>& hadronBlockInputs);
 
@@ -247,7 +244,7 @@ private:
                           const std::vector<pat::Muon>* muons,
                           const edm::View<reco::Candidate>& pfCands,
                           const CellGrid& grid,
-                          TauFunc tau_funcs,
+                          const TauFunc& tau_funcs,
                           bool is_inner,
                           std::vector<float>& egammaBlockInputs,
                           std::vector<float>& muonBlockInputs,
@@ -546,7 +543,7 @@ void DeepTauIdSonicProducer::getPredictionsV2(TauCollection::const_reference& ta
                                               const edm::View<reco::Candidate>& pfCands,
                                               const reco::Vertex& pv,
                                               double rho,
-                                              TauFunc tau_funcs,
+                                              const TauFunc& tau_funcs,
                                               std::vector<float>& tauBlockInputs,
                                               std::vector<float>& egammaInnerBlockInputs,
                                               std::vector<float>& muonInnerBlockInputs,
@@ -609,47 +606,6 @@ void DeepTauIdSonicProducer::getPredictionsV2(TauCollection::const_reference& ta
                                         outerGridposInputs);
 }
 
-template <typename Collection, typename TauCastType>
-void DeepTauIdSonicProducer::fillGrids(const TauCastType& tau,
-                                       const Collection& objects,
-                                       CellGrid& inner_grid,
-                                       CellGrid& outer_grid) {
-  static constexpr double outer_dR2 = 0.25;  //0.5^2
-  const double inner_radius = getInnerSignalConeRadius(tau.polarP4().pt());
-  const double inner_dR2 = std::pow(inner_radius, 2);
-
-  const auto addObject = [&](size_t n, double deta, double dphi, CellGrid& grid) {
-    const auto& obj = objects.at(n);
-    const CellObjectType obj_type = GetCellObjectType(obj);
-    if (obj_type == CellObjectType::Other)
-      return;
-    CellIndex cell_index;
-    if (grid.tryGetCellIndex(deta, dphi, cell_index)) {
-      Cell& cell = grid[cell_index];
-      auto iter = cell.find(obj_type);
-      if (iter != cell.end()) {
-        const auto& prev_obj = objects.at(iter->second);
-        // fill in the grid with the particle of highest-pT
-        if (obj.polarP4().pt() > prev_obj.polarP4().pt())
-          iter->second = n;
-      } else {
-        cell[obj_type] = n;
-      }
-    }
-  };
-
-  for (size_t n = 0; n < objects.size(); ++n) {
-    const auto& obj = objects.at(n);
-    const double deta = obj.polarP4().eta() - tau.polarP4().eta();
-    const double dphi = reco::deltaPhi(obj.polarP4().phi(), tau.polarP4().phi());
-    const double dR2 = std::pow(deta, 2) + std::pow(dphi, 2);
-    if (dR2 < inner_dR2)
-      addObject(n, deta, dphi, inner_grid);
-    if (dR2 < outer_dR2)
-      addObject(n, deta, dphi, outer_grid);
-  }
-}
-
 template <typename CandidateCastType, typename TauCastType>
 void DeepTauIdSonicProducer::createConvFeatures(const TauCastType& tau,
                                                 const size_t tau_index,
@@ -660,7 +616,7 @@ void DeepTauIdSonicProducer::createConvFeatures(const TauCastType& tau,
                                                 const std::vector<pat::Muon>* muons,
                                                 const edm::View<reco::Candidate>& pfCands,
                                                 const CellGrid& grid,
-                                                TauFunc tau_funcs,
+                                                const TauFunc& tau_funcs,
                                                 bool is_inner,
                                                 std::vector<float>& egammaBlockInputs,
                                                 std::vector<float>& muonBlockInputs,
@@ -716,7 +672,7 @@ void DeepTauIdSonicProducer::createTauBlockInputs(const TauCastType& tau,
                                                   const edm::RefToBase<reco::BaseTau> tau_ref,
                                                   const reco::Vertex& pv,
                                                   double rho,
-                                                  TauFunc tau_funcs,
+                                                  const TauFunc& tau_funcs,
                                                   std::vector<float>& tauBlockInputs) {
   namespace dnn = dnn_inputs_2017_v2::TauBlockInputs;
   const auto& get = [&](int var_index) -> float& { return tauBlockInputs.at(var_index); };
@@ -823,7 +779,7 @@ void DeepTauIdSonicProducer::createEgammaBlockInputs(unsigned idx,
                                                      const std::vector<pat::Electron>* electrons,
                                                      const edm::View<reco::Candidate>& pfCands,
                                                      const Cell& cell_map,
-                                                     TauFunc tau_funcs,
+                                                     const TauFunc& tau_funcs,
                                                      bool is_inner,
                                                      std::vector<float>& egammaBlockInputs) {
   namespace dnn = dnn_inputs_2017_v2::EgammaBlockInputs;
@@ -1060,7 +1016,7 @@ void DeepTauIdSonicProducer::createMuonBlockInputs(unsigned idx,
                                                    const std::vector<pat::Muon>* muons,
                                                    const edm::View<reco::Candidate>& pfCands,
                                                    const Cell& cell_map,
-                                                   TauFunc tau_funcs,
+                                                   const TauFunc& tau_funcs,
                                                    bool is_inner,
                                                    std::vector<float>& muonBlockInputs) {
   namespace dnn = dnn_inputs_2017_v2::MuonBlockInputs;
@@ -1207,7 +1163,7 @@ void DeepTauIdSonicProducer::createHadronsBlockInputs(unsigned idx,
                                                       double rho,
                                                       const edm::View<reco::Candidate>& pfCands,
                                                       const Cell& cell_map,
-                                                      TauFunc tau_funcs,
+                                                      const TauFunc& tau_funcs,
                                                       bool is_inner,
                                                       std::vector<float>& hadronBlockInputs) {
   namespace dnn = dnn_inputs_2017_v2::HadronBlockInputs;
