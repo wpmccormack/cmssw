@@ -389,9 +389,9 @@ namespace deeptau_helper {
   bool isAbove(double value, double min) { return std::isnormal(value) && value > min; }
 
   bool calculateElectronClusterVarsV2(const pat::Electron& ele,
-                                             float& cc_ele_energy,
-                                             float& cc_gamma_energy,
-                                             int& cc_n_gamma) {
+                                      float& cc_ele_energy,
+                                      float& cc_gamma_energy,
+                                      int& cc_n_gamma) {
     cc_ele_energy = cc_gamma_energy = 0;
     cc_n_gamma = 0;
     const auto& superCluster = ele.superCluster();
@@ -421,4 +421,4 @@ namespace deeptau_helper {
     const double abs_eta = std::abs(eta);
     return abs_eta > 1.46 && abs_eta < 1.558;
   }
-}
+}  // namespace deeptau_helper

@@ -458,8 +458,14 @@ private:
     fillGrids(dynamic_cast<const TauCastType&>(tau), pfCands, inner_grid, outer_grid);
 
     tauBlockTensor_->flat<float>().setZero();
-    createTauBlockInputs<CandidateCastType>(
-        dynamic_cast<const TauCastType&>(tau), tau_index, tau_ref, pv, rho, tau_funcs, *tauBlockTensor_, disable_dxy_pca_);
+    createTauBlockInputs<CandidateCastType>(dynamic_cast<const TauCastType&>(tau),
+                                            tau_index,
+                                            tau_ref,
+                                            pv,
+                                            rho,
+                                            tau_funcs,
+                                            *tauBlockTensor_,
+                                            disable_dxy_pca_);
     using namespace dnn_inputs_2017_v2;
     checkInputs(*tauBlockTensor_, "input_tau", TauBlockInputs::NumberOfInputs);
     createConvFeatures<CandidateCastType>(dynamic_cast<const TauCastType&>(tau),
@@ -621,12 +627,42 @@ private:
                       << std::endl;
           }
           const Cell& cell = cell_iter->second;
-          createEgammaBlockInputs<CandidateCastType>(
-              idx, tau, tau_index, tau_ref, pv, rho, electrons, pfCands, cell, tau_funcs, is_inner, *eGammaTensor_.at(is_inner));
-          createMuonBlockInputs<CandidateCastType>(
-              idx, tau, tau_index, tau_ref, pv, rho, muons, pfCands, cell, tau_funcs, is_inner, *muonTensor_.at(is_inner));
-          createHadronsBlockInputs<CandidateCastType>(
-              idx, tau, tau_index, tau_ref, pv, rho, pfCands, cell, tau_funcs, is_inner, *hadronsTensor_.at(is_inner), disable_hcalFraction_workaround_);
+          createEgammaBlockInputs<CandidateCastType>(idx,
+                                                     tau,
+                                                     tau_index,
+                                                     tau_ref,
+                                                     pv,
+                                                     rho,
+                                                     electrons,
+                                                     pfCands,
+                                                     cell,
+                                                     tau_funcs,
+                                                     is_inner,
+                                                     *eGammaTensor_.at(is_inner));
+          createMuonBlockInputs<CandidateCastType>(idx,
+                                                   tau,
+                                                   tau_index,
+                                                   tau_ref,
+                                                   pv,
+                                                   rho,
+                                                   muons,
+                                                   pfCands,
+                                                   cell,
+                                                   tau_funcs,
+                                                   is_inner,
+                                                   *muonTensor_.at(is_inner));
+          createHadronsBlockInputs<CandidateCastType>(idx,
+                                                      tau,
+                                                      tau_index,
+                                                      tau_ref,
+                                                      pv,
+                                                      rho,
+                                                      pfCands,
+                                                      cell,
+                                                      tau_funcs,
+                                                      is_inner,
+                                                      *hadronsTensor_.at(is_inner),
+                                                      disable_hcalFraction_workaround_);
           idx += 1;
         } else {
           if (debug_level >= 2) {

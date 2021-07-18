@@ -710,9 +710,13 @@ namespace deep_tau_2017 {
     auto getEtaAtEcalEntrance(const reco::PFTau& tau) const {
       return tau.leadPFChargedHadrCand()->positionAtECALEntrance().eta();
     }
-    auto getEcalEnergyLeadingChargedHadr(const reco::PFTau& tau) const { return tau.leadPFChargedHadrCand()->ecalEnergy(); }
+    auto getEcalEnergyLeadingChargedHadr(const reco::PFTau& tau) const {
+      return tau.leadPFChargedHadrCand()->ecalEnergy();
+    }
     auto getEcalEnergyLeadingChargedHadr(const pat::Tau& tau) const { return tau.ecalEnergyLeadChargedHadrCand(); }
-    auto getHcalEnergyLeadingChargedHadr(const reco::PFTau& tau) const { return tau.leadPFChargedHadrCand()->hcalEnergy(); }
+    auto getHcalEnergyLeadingChargedHadr(const reco::PFTau& tau) const {
+      return tau.leadPFChargedHadrCand()->hcalEnergy();
+    }
     auto getHcalEnergyLeadingChargedHadr(const pat::Tau& tau) const { return tau.hcalEnergyLeadChargedHadrCand(); }
 
     template <typename PreDiscrType>
@@ -1148,18 +1152,18 @@ namespace deeptau_helper {
   bool isAbove(double value, double min);
 
   bool calculateElectronClusterVarsV2(const pat::Electron& ele,
-                                             float& cc_ele_energy,
-                                             float& cc_gamma_energy,
-                                             int& cc_n_gamma);
+                                      float& cc_ele_energy,
+                                      float& cc_gamma_energy,
+                                      int& cc_n_gamma);
 
   double getInnerSignalConeRadius(double pt);
 
   // Copied from https://github.com/cms-sw/cmssw/blob/CMSSW_9_4_X/RecoTauTag/RecoTau/plugins/PATTauDiscriminationByMVAIsolationRun2.cc#L218
   template <typename TauCastType>
   bool calculateGottfriedJacksonAngleDifference(const TauCastType& tau,
-                                                       const size_t tau_index,
-                                                       double& gj_diff,
-                                                       deep_tau_2017::TauFunc tau_funcs) {
+                                                const size_t tau_index,
+                                                double& gj_diff,
+                                                deep_tau_2017::TauFunc tau_funcs) {
     if (tau_funcs.getHasSecondaryVertex(tau, tau_index)) {
       static constexpr double mTau = 1.77682;
       const double mAOne = tau.p4().M();
@@ -1179,8 +1183,8 @@ namespace deeptau_helper {
 
   template <typename TauCastType>
   float calculateGottfriedJacksonAngleDifference(const TauCastType& tau,
-                                                        const size_t tau_index,
-                                                        deep_tau_2017::TauFunc tau_funcs) {
+                                                 const size_t tau_index,
+                                                 deep_tau_2017::TauFunc tau_funcs) {
     double gj_diff;
     if (calculateGottfriedJacksonAngleDifference(tau, tau_index, gj_diff, tau_funcs))
       return static_cast<float>(gj_diff);
@@ -1190,7 +1194,10 @@ namespace deeptau_helper {
   bool isInEcalCrack(double eta);
 
   template <typename Collection, typename TauCastType>
-  void fillGrids(const TauCastType& tau, const Collection& objects, deep_tau_2017::CellGrid& inner_grid, deep_tau_2017::CellGrid& outer_grid) {
+  void fillGrids(const TauCastType& tau,
+                 const Collection& objects,
+                 deep_tau_2017::CellGrid& inner_grid,
+                 deep_tau_2017::CellGrid& outer_grid) {
     static constexpr double outer_dR2 = 0.25;  //0.5^2
     const double inner_radius = getInnerSignalConeRadius(tau.polarP4().pt());
     const double inner_dR2 = std::pow(inner_radius, 2);
@@ -1234,19 +1241,19 @@ namespace deeptau_helper {
                             double rho,
                             const deep_tau_2017::TauFunc& tau_funcs,
                             TauBlockType& tauBlockInputs,
-							bool disable_dxy_pca) {
+                            bool disable_dxy_pca) {
     namespace dnn = deep_tau_2017::dnn_inputs_2017_v2::TauBlockInputs;
-	namespace candFunc = deep_tau_2017::candFunc;
-   
-    // TauBlockType should be a std::vector<float> (for the SonicProducer), 
-	// or a tensorflow::Tensor (for the direct inference producer)
-	const auto& get = [&](int var_index) -> float& {
-		if constexpr (std::is_same_v<TauBlockType, std::vector<float>>) {
-			return tauBlockInputs.at(var_index);
-		} else {
-			return ((tensorflow::Tensor)tauBlockInputs).matrix<float>()(0, var_index);
-		}
-	};
+    namespace candFunc = deep_tau_2017::candFunc;
+
+    // TauBlockType should be a std::vector<float> (for the SonicProducer),
+    // or a tensorflow::Tensor (for the direct inference producer)
+    const auto& get = [&](int var_index) -> float& {
+      if constexpr (std::is_same_v<TauBlockType, std::vector<float>>) {
+        return tauBlockInputs.at(var_index);
+      } else {
+        return ((tensorflow::Tensor)tauBlockInputs).matrix<float>()(0, var_index);
+      }
+    };
 
     auto leadChargedHadrCand = dynamic_cast<const CandidateCastType*>(tau.leadChargedHadrCand().get());
 
@@ -1292,8 +1299,8 @@ namespace deeptau_helper {
     if (tau_dxy_valid) {
       get(dnn::tau_dxy_valid) = tau_dxy_valid;
       get(dnn::tau_dxy) = getValueNorm(tau_funcs.getdxy(tau, tau_index), 0.0018f, 0.0085f);
-      get(dnn::tau_dxy_sig) =
-          getValueNorm(std::abs(tau_funcs.getdxy(tau, tau_index)) / tau_funcs.getdxyError(tau, tau_index), 2.26f, 4.191f);
+      get(dnn::tau_dxy_sig) = getValueNorm(
+          std::abs(tau_funcs.getdxy(tau, tau_index)) / tau_funcs.getdxyError(tau, tau_index), 2.26f, 4.191f);
     }
     const bool tau_ip3d_valid =
         isAbove(tau_funcs.getip3d(tau, tau_index), -10) && isAbove(tau_funcs.getip3dError(tau, tau_index), 0);
@@ -1340,7 +1347,6 @@ namespace deeptau_helper {
         getValueNorm(tau_funcs.getEtaAtEcalEntrance(tau) - tau.p4().eta(), 0.0042f, 0.0323f);
   }
 
-
   template <typename CandidateCastType, typename TauCastType, typename EgammaBlockType>
   void createEgammaBlockInputs(unsigned idx,
                                const TauCastType& tau,
@@ -1353,24 +1359,24 @@ namespace deeptau_helper {
                                const deep_tau_2017::Cell& cell_map,
                                const deep_tau_2017::TauFunc& tau_funcs,
                                bool is_inner,
-							   EgammaBlockType& egammaBlockInputs) {
+                               EgammaBlockType& egammaBlockInputs) {
     namespace dnn = deep_tau_2017::dnn_inputs_2017_v2::EgammaBlockInputs;
-	namespace candFunc = deep_tau_2017::candFunc;
+    namespace candFunc = deep_tau_2017::candFunc;
 
-	// EgammaBlockType should be a std::vector<float> (for the SonicProducer),
+    // EgammaBlockType should be a std::vector<float> (for the SonicProducer),
     // or a tensorflow::Tensor (for the direct inference producer)
     const auto& get = [&](int var_index) -> float& {
-        if constexpr (std::is_same_v<EgammaBlockType, std::vector<float>>) {
-			return egammaBlockInputs.at(var_index + idx * dnn::NumberOfInputs);
-        } else {
-			return ((tensorflow::Tensor)egammaBlockInputs).tensor<float, 4>()(idx, 0, 0, var_index);
-        }
+      if constexpr (std::is_same_v<EgammaBlockType, std::vector<float>>) {
+        return egammaBlockInputs.at(var_index + idx * dnn::NumberOfInputs);
+      } else {
+        return ((tensorflow::Tensor)egammaBlockInputs).tensor<float, 4>()(idx, 0, 0, var_index);
+      }
     };
-  
+
     const bool valid_index_pf_ele = cell_map.count(deep_tau_2017::CellObjectType::PfCand_electron);
     const bool valid_index_pf_gamma = cell_map.count(deep_tau_2017::CellObjectType::PfCand_gamma);
     const bool valid_index_ele = cell_map.count(deep_tau_2017::CellObjectType::Electron);
-  
+
     if (!cell_map.empty()) {
       get(dnn::rho) = getValueNorm(rho, 21.49f, 9.713f);
       get(dnn::tau_pt) = getValueLinear(tau.polarP4().pt(), 20.f, 1000.f, true);
@@ -1380,7 +1386,7 @@ namespace deeptau_helper {
     if (valid_index_pf_ele) {
       size_t index_pf_ele = cell_map.at(deep_tau_2017::CellObjectType::PfCand_electron);
       const auto& ele_cand = dynamic_cast<const CandidateCastType&>(pfCands.at(index_pf_ele));
-  
+
       get(dnn::pfCand_ele_valid) = valid_index_pf_ele;
       get(dnn::pfCand_ele_rel_pt) = getValueNorm(pfCands.at(index_pf_ele).polarP4().pt() / tau.polarP4().pt(),
                                                  is_inner ? 0.9792f : 0.304f,
@@ -1418,7 +1424,7 @@ namespace deeptau_helper {
           pfCands.at(index_pf_ele).vertex().z() - pv.position().z() - tau_funcs.getFlightLength(tau, tau_index).z(),
           0.f,
           1.307f);
-  
+
       const bool hasTrackDetails = candFunc::getHasTrackDetails(ele_cand);
       if (hasTrackDetails) {
         get(dnn::pfCand_ele_hasTrackDetails) = hasTrackDetails;
@@ -1436,7 +1442,7 @@ namespace deeptau_helper {
     if (valid_index_pf_gamma) {
       size_t index_pf_gamma = cell_map.at(deep_tau_2017::CellObjectType::PfCand_gamma);
       const auto& gamma_cand = dynamic_cast<const CandidateCastType&>(pfCands.at(index_pf_gamma));
-  
+
       get(dnn::pfCand_gamma_valid) = valid_index_pf_gamma;
       get(dnn::pfCand_gamma_rel_pt) = getValueNorm(pfCands.at(index_pf_gamma).polarP4().pt() / tau.polarP4().pt(),
                                                    is_inner ? 0.6048f : 0.02576f,
@@ -1445,10 +1451,11 @@ namespace deeptau_helper {
                                                    is_inner ? -0.1f : -0.5f,
                                                    is_inner ? 0.1f : 0.5f,
                                                    false);
-      get(dnn::pfCand_gamma_dphi) = getValueLinear(deep_tau_2017::dPhi(tau.polarP4(), pfCands.at(index_pf_gamma).polarP4()),
-                                                   is_inner ? -0.1f : -0.5f,
-                                                   is_inner ? 0.1f : 0.5f,
-                                                   false);
+      get(dnn::pfCand_gamma_dphi) =
+          getValueLinear(deep_tau_2017::dPhi(tau.polarP4(), pfCands.at(index_pf_gamma).polarP4()),
+                         is_inner ? -0.1f : -0.5f,
+                         is_inner ? 0.1f : 0.5f,
+                         false);
       get(dnn::pfCand_gamma_pvAssociationQuality) =
           getValueLinear<int>(candFunc::getPvAssocationQuality(gamma_cand), 0, 7, true);
       get(dnn::pfCand_gamma_fromPV) = getValueLinear<int>(candFunc::getFromPV(gamma_cand), 0, 3, true);
@@ -1487,12 +1494,12 @@ namespace deeptau_helper {
         get(dnn::pfCand_gamma_dz) = getValueNorm(candFunc::getTauDz(gamma_cand), 0.0071f, 5.285f);
         get(dnn::pfCand_gamma_dz_sig) =
             getValueNorm(std::abs(candFunc::getTauDz(gamma_cand)) / gamma_cand.dzError(), 162.1f, 622.4f);
-        get(dnn::pfCand_gamma_track_chi2_ndof) =
-            candFunc::getPseudoTrack(gamma_cand).ndof() > 0
-                ? getValueNorm(candFunc::getPseudoTrack(gamma_cand).chi2() / candFunc::getPseudoTrack(gamma_cand).ndof(),
-                               4.268f,
-                               15.47f)
-                : 0;
+        get(dnn::pfCand_gamma_track_chi2_ndof) = candFunc::getPseudoTrack(gamma_cand).ndof() > 0
+                                                     ? getValueNorm(candFunc::getPseudoTrack(gamma_cand).chi2() /
+                                                                        candFunc::getPseudoTrack(gamma_cand).ndof(),
+                                                                    4.268f,
+                                                                    15.47f)
+                                                     : 0;
         get(dnn::pfCand_gamma_track_ndof) =
             candFunc::getPseudoTrack(gamma_cand).ndof() > 0
                 ? getValueNorm(candFunc::getPseudoTrack(gamma_cand).ndof(), 12.25f, 4.774f)
@@ -1501,7 +1508,7 @@ namespace deeptau_helper {
     }
     if (valid_index_ele) {
       size_t index_ele = cell_map.at(deep_tau_2017::CellObjectType::Electron);
-  
+
       get(dnn::ele_valid) = valid_index_ele;
       get(dnn::ele_rel_pt) = getValueNorm(electrons->at(index_ele).polarP4().pt() / tau.polarP4().pt(),
                                           is_inner ? 1.067f : 0.5111f,
@@ -1514,7 +1521,7 @@ namespace deeptau_helper {
                                           is_inner ? -0.1f : -0.5f,
                                           is_inner ? 0.1f : 0.5f,
                                           false);
-  
+
       float cc_ele_energy, cc_gamma_energy;
       int cc_n_gamma;
       const bool cc_valid =
@@ -1584,7 +1591,7 @@ namespace deeptau_helper {
       }
     }
   }
- 
+
   template <typename CandidateCastType, typename TauCastType, typename MuonBlockType>
   void createMuonBlockInputs(unsigned idx,
                              const TauCastType& tau,
@@ -1599,21 +1606,21 @@ namespace deeptau_helper {
                              bool is_inner,
                              MuonBlockType& muonBlockInputs) {
     namespace dnn = deep_tau_2017::dnn_inputs_2017_v2::MuonBlockInputs;
-	namespace candFunc = deep_tau_2017::candFunc;
+    namespace candFunc = deep_tau_2017::candFunc;
 
-	// MuonBlockType should be a std::vector<float> (for the SonicProducer),
+    // MuonBlockType should be a std::vector<float> (for the SonicProducer),
     // or a tensorflow::Tensor (for the direct inference producer)
     const auto& get = [&](int var_index) -> float& {
-        if constexpr (std::is_same_v<MuonBlockType, std::vector<float>>) {
-            return muonBlockInputs.at(var_index + idx * dnn::NumberOfInputs);
-        } else {
-            return ((tensorflow::Tensor)muonBlockInputs).tensor<float, 4>()(idx, 0, 0, var_index);
-        }
+      if constexpr (std::is_same_v<MuonBlockType, std::vector<float>>) {
+        return muonBlockInputs.at(var_index + idx * dnn::NumberOfInputs);
+      } else {
+        return ((tensorflow::Tensor)muonBlockInputs).tensor<float, 4>()(idx, 0, 0, var_index);
+      }
     };
-  
+
     const bool valid_index_pf_muon = cell_map.count(deep_tau_2017::CellObjectType::PfCand_muon);
     const bool valid_index_muon = cell_map.count(deep_tau_2017::CellObjectType::Muon);
-  
+
     if (!cell_map.empty()) {
       get(dnn::rho) = getValueNorm(rho, 21.49f, 9.713f);
       get(dnn::tau_pt) = getValueLinear(tau.polarP4().pt(), 20.f, 1000.f, true);
@@ -1623,7 +1630,7 @@ namespace deeptau_helper {
     if (valid_index_pf_muon) {
       size_t index_pf_muon = cell_map.at(deep_tau_2017::CellObjectType::PfCand_muon);
       const auto& muon_cand = dynamic_cast<const CandidateCastType&>(pfCands.at(index_pf_muon));
-  
+
       get(dnn::pfCand_muon_valid) = valid_index_pf_muon;
       get(dnn::pfCand_muon_rel_pt) = getValueNorm(pfCands.at(index_pf_muon).polarP4().pt() / tau.polarP4().pt(),
                                                   is_inner ? 0.9509f : 0.0861f,
@@ -1632,10 +1639,11 @@ namespace deeptau_helper {
                                                   is_inner ? -0.1f : -0.5f,
                                                   is_inner ? 0.1f : 0.5f,
                                                   false);
-      get(dnn::pfCand_muon_dphi) = getValueLinear(deep_tau_2017::dPhi(tau.polarP4(), pfCands.at(index_pf_muon).polarP4()),
-                                                  is_inner ? -0.1f : -0.5f,
-                                                  is_inner ? 0.1f : 0.5f,
-                                                  false);
+      get(dnn::pfCand_muon_dphi) =
+          getValueLinear(deep_tau_2017::dPhi(tau.polarP4(), pfCands.at(index_pf_muon).polarP4()),
+                         is_inner ? -0.1f : -0.5f,
+                         is_inner ? 0.1f : 0.5f,
+                         false);
       get(dnn::pfCand_muon_pvAssociationQuality) =
           getValueLinear<int>(candFunc::getPvAssocationQuality(muon_cand), 0, 7, true);
       get(dnn::pfCand_muon_fromPV) = getValueLinear<int>(candFunc::getFromPV(muon_cand), 0, 3, true);
@@ -1643,7 +1651,8 @@ namespace deeptau_helper {
                                                    : getValue(candFunc::getPuppiWeight(muon_cand, 0.8132477f));
       get(dnn::pfCand_muon_charge) = getValue(muon_cand.charge());
       get(dnn::pfCand_muon_lostInnerHits) = getValue<int>(candFunc::getLostInnerHits(muon_cand, 0));
-      get(dnn::pfCand_muon_numberOfPixelHits) = getValueLinear(candFunc::getNumberOfPixelHits(muon_cand, 0), 0, 11, true);
+      get(dnn::pfCand_muon_numberOfPixelHits) =
+          getValueLinear(candFunc::getNumberOfPixelHits(muon_cand, 0), 0, 11, true);
       get(dnn::pfCand_muon_vertex_dx) =
           getValueNorm(pfCands.at(index_pf_muon).vertex().x() - pv.position().x(), -0.0007f, 0.6869f);
       get(dnn::pfCand_muon_vertex_dy) =
@@ -1662,7 +1671,7 @@ namespace deeptau_helper {
           pfCands.at(index_pf_muon).vertex().z() - pv.position().z() - tau_funcs.getFlightLength(tau, tau_index).z(),
           -0.0118f,
           4.405f);
-  
+
       const bool hasTrackDetails = candFunc::getHasTrackDetails(muon_cand);
       if (hasTrackDetails) {
         get(dnn::pfCand_muon_hasTrackDetails) = hasTrackDetails;
@@ -1679,7 +1688,7 @@ namespace deeptau_helper {
     }
     if (valid_index_muon) {
       size_t index_muon = cell_map.at(deep_tau_2017::CellObjectType::Muon);
-  
+
       get(dnn::muon_valid) = valid_index_muon;
       get(dnn::muon_rel_pt) = getValueNorm(muons->at(index_muon).polarP4().pt() / tau.polarP4().pt(),
                                            is_inner ? 0.7966f : 0.2678f,
@@ -1688,14 +1697,16 @@ namespace deeptau_helper {
                                            is_inner ? -0.1f : -0.5f,
                                            is_inner ? 0.1f : 0.5f,
                                            false);
-      get(dnn::muon_dphi) = getValueLinear(
-          deep_tau_2017::dPhi(tau.polarP4(), muons->at(index_muon).polarP4()), is_inner ? -0.1f : -0.5f, is_inner ? 0.1f : 0.5f, false);
+      get(dnn::muon_dphi) = getValueLinear(deep_tau_2017::dPhi(tau.polarP4(), muons->at(index_muon).polarP4()),
+                                           is_inner ? -0.1f : -0.5f,
+                                           is_inner ? 0.1f : 0.5f,
+                                           false);
       get(dnn::muon_dxy) = getValueNorm(muons->at(index_muon).dB(pat::Muon::PV2D), 0.0019f, 1.039f);
       get(dnn::muon_dxy_sig) =
           getValueNorm(std::abs(muons->at(index_muon).dB(pat::Muon::PV2D)) / muons->at(index_muon).edB(pat::Muon::PV2D),
                        8.98f,
                        71.17f);
-  
+
       const bool normalizedChi2_valid =
           muons->at(index_muon).globalTrack().isNonnull() && muons->at(index_muon).normChi2() >= 0;
       if (normalizedChi2_valid) {
@@ -1706,31 +1717,34 @@ namespace deeptau_helper {
       }
       get(dnn::muon_segmentCompatibility) = getValue(muons->at(index_muon).segmentCompatibility());
       get(dnn::muon_caloCompatibility) = getValue(muons->at(index_muon).caloCompatibility());
-  
+
       const bool pfEcalEnergy_valid = muons->at(index_muon).pfEcalEnergy() >= 0;
       if (pfEcalEnergy_valid) {
         get(dnn::muon_pfEcalEnergy_valid) = pfEcalEnergy_valid;
         get(dnn::muon_rel_pfEcalEnergy) =
             getValueNorm(muons->at(index_muon).pfEcalEnergy() / muons->at(index_muon).polarP4().pt(), 0.2273f, 0.4865f);
       }
-  
+
       deep_tau_2017::MuonHitMatchV2 hit_match(muons->at(index_muon));
       static const std::map<int, std::pair<int, int>> muonMatchHitVars = {
           {MuonSubdetId::DT, {dnn::muon_n_matches_DT_1, dnn::muon_n_hits_DT_1}},
           {MuonSubdetId::CSC, {dnn::muon_n_matches_CSC_1, dnn::muon_n_hits_CSC_1}},
           {MuonSubdetId::RPC, {dnn::muon_n_matches_RPC_1, dnn::muon_n_hits_RPC_1}}};
-  
+
       static const std::map<int, std::vector<float>> muonMatchVarLimits = {
           {MuonSubdetId::DT, {2, 2, 2, 2}}, {MuonSubdetId::CSC, {6, 2, 2, 2}}, {MuonSubdetId::RPC, {7, 6, 4, 4}}};
-  
-      static const std::map<int, std::vector<float>> muonHitVarLimits = {
-          {MuonSubdetId::DT, {12, 12, 12, 8}}, {MuonSubdetId::CSC, {24, 12, 12, 12}}, {MuonSubdetId::RPC, {4, 4, 2, 2}}};
-  
+
+      static const std::map<int, std::vector<float>> muonHitVarLimits = {{MuonSubdetId::DT, {12, 12, 12, 8}},
+                                                                         {MuonSubdetId::CSC, {24, 12, 12, 12}},
+                                                                         {MuonSubdetId::RPC, {4, 4, 2, 2}}};
+
       for (int subdet : hit_match.MuonHitMatchV2::consideredSubdets()) {
         const auto& matchHitVar = muonMatchHitVars.at(subdet);
         const auto& matchLimits = muonMatchVarLimits.at(subdet);
         const auto& hitLimits = muonHitVarLimits.at(subdet);
-        for (int station = deep_tau_2017::MuonHitMatchV2::first_station_id; station <= deep_tau_2017::MuonHitMatchV2::last_station_id; ++station) {
+        for (int station = deep_tau_2017::MuonHitMatchV2::first_station_id;
+             station <= deep_tau_2017::MuonHitMatchV2::last_station_id;
+             ++station) {
           const unsigned n_matches = hit_match.nMatches(subdet, station);
           const unsigned n_hits = hit_match.nHits(subdet, station);
           get(matchHitVar.first + station - 1) = getValueLinear(n_matches, 0, matchLimits.at(station - 1), true);
@@ -1752,23 +1766,23 @@ namespace deeptau_helper {
                                 const deep_tau_2017::TauFunc& tau_funcs,
                                 bool is_inner,
                                 HadronBlockType& hadronBlockInputs,
-								bool disable_hcalFraction_workaround) {
+                                bool disable_hcalFraction_workaround) {
     namespace dnn = deep_tau_2017::dnn_inputs_2017_v2::HadronBlockInputs;
-	namespace candFunc = deep_tau_2017::candFunc;
+    namespace candFunc = deep_tau_2017::candFunc;
 
-	// HadronBlockType should be a std::vector<float> (for the SonicProducer),
+    // HadronBlockType should be a std::vector<float> (for the SonicProducer),
     // or a tensorflow::Tensor (for the direct inference producer)
     const auto& get = [&](int var_index) -> float& {
-        if constexpr (std::is_same_v<HadronBlockType, std::vector<float>>) {
-            return hadronBlockInputs.at(var_index + idx * dnn::NumberOfInputs);
-        } else {
-            return ((tensorflow::Tensor)hadronBlockInputs).tensor<float, 4>()(idx, 0, 0, var_index);
-        }
+      if constexpr (std::is_same_v<HadronBlockType, std::vector<float>>) {
+        return hadronBlockInputs.at(var_index + idx * dnn::NumberOfInputs);
+      } else {
+        return ((tensorflow::Tensor)hadronBlockInputs).tensor<float, 4>()(idx, 0, 0, var_index);
+      }
     };
-  
+
     const bool valid_chH = cell_map.count(deep_tau_2017::CellObjectType::PfCand_chargedHadron);
     const bool valid_nH = cell_map.count(deep_tau_2017::CellObjectType::PfCand_neutralHadron);
-  
+
     if (!cell_map.empty()) {
       get(dnn::rho) = getValueNorm(rho, 21.49f, 9.713f);
       get(dnn::tau_pt) = getValueLinear(tau.polarP4().pt(), 20.f, 1000.f, true);
@@ -1778,7 +1792,7 @@ namespace deeptau_helper {
     if (valid_chH) {
       size_t index_chH = cell_map.at(deep_tau_2017::CellObjectType::PfCand_chargedHadron);
       const auto& chH_cand = dynamic_cast<const CandidateCastType&>(pfCands.at(index_chH));
-  
+
       get(dnn::pfCand_chHad_valid) = valid_chH;
       get(dnn::pfCand_chHad_rel_pt) = getValueNorm(pfCands.at(index_chH).polarP4().pt() / tau.polarP4().pt(),
                                                    is_inner ? 0.2564f : 0.0194f,
@@ -1787,8 +1801,10 @@ namespace deeptau_helper {
                                                    is_inner ? -0.1f : -0.5f,
                                                    is_inner ? 0.1f : 0.5f,
                                                    false);
-      get(dnn::pfCand_chHad_dphi) = getValueLinear(
-          deep_tau_2017::dPhi(tau.polarP4(), pfCands.at(index_chH).polarP4()), is_inner ? -0.1f : -0.5f, is_inner ? 0.1f : 0.5f, false);
+      get(dnn::pfCand_chHad_dphi) = getValueLinear(deep_tau_2017::dPhi(tau.polarP4(), pfCands.at(index_chH).polarP4()),
+                                                   is_inner ? -0.1f : -0.5f,
+                                                   is_inner ? 0.1f : 0.5f,
+                                                   false);
       get(dnn::pfCand_chHad_leadChargedHadrCand) =
           getValue(&chH_cand == dynamic_cast<const CandidateCastType*>(tau.leadChargedHadrCand().get()));
       get(dnn::pfCand_chHad_pvAssociationQuality) =
@@ -1796,14 +1812,16 @@ namespace deeptau_helper {
       get(dnn::pfCand_chHad_fromPV) = getValueLinear<int>(candFunc::getFromPV(chH_cand), 0, 3, true);
       const float default_chH_pw_inner = 0.7614090f;
       const float default_chH_pw_outer = 0.1974930f;
-      get(dnn::pfCand_chHad_puppiWeight) = is_inner ? getValue(candFunc::getPuppiWeight(chH_cand, default_chH_pw_inner))
-                                                    : getValue(candFunc::getPuppiWeight(chH_cand, default_chH_pw_outer));
+      get(dnn::pfCand_chHad_puppiWeight) = is_inner
+                                               ? getValue(candFunc::getPuppiWeight(chH_cand, default_chH_pw_inner))
+                                               : getValue(candFunc::getPuppiWeight(chH_cand, default_chH_pw_outer));
       get(dnn::pfCand_chHad_puppiWeightNoLep) =
           is_inner ? getValue(candFunc::getPuppiWeightNoLep(chH_cand, default_chH_pw_inner))
                    : getValue(candFunc::getPuppiWeightNoLep(chH_cand, default_chH_pw_outer));
       get(dnn::pfCand_chHad_charge) = getValue(chH_cand.charge());
       get(dnn::pfCand_chHad_lostInnerHits) = getValue<int>(candFunc::getLostInnerHits(chH_cand, 0));
-      get(dnn::pfCand_chHad_numberOfPixelHits) = getValueLinear(candFunc::getNumberOfPixelHits(chH_cand, 0), 0, 12, true);
+      get(dnn::pfCand_chHad_numberOfPixelHits) =
+          getValueLinear(candFunc::getNumberOfPixelHits(chH_cand, 0), 0, 12, true);
       get(dnn::pfCand_chHad_vertex_dx) =
           getValueNorm(pfCands.at(index_chH).vertex().x() - pv.position().x(), 0.0005f, 1.735f);
       get(dnn::pfCand_chHad_vertex_dy) =
@@ -1822,7 +1840,7 @@ namespace deeptau_helper {
           pfCands.at(index_chH).vertex().z() - pv.position().z() - tau_funcs.getFlightLength(tau, tau_index).z(),
           -0.0138f,
           8.622f);
-  
+
       const bool hasTrackDetails = candFunc::getHasTrackDetails(chH_cand);
       if (hasTrackDetails) {
         get(dnn::pfCand_chHad_hasTrackDetails) = hasTrackDetails;
@@ -1838,9 +1856,10 @@ namespace deeptau_helper {
                                0.7876f,
                                3.694f)
                 : 0;
-        get(dnn::pfCand_chHad_track_ndof) = candFunc::getPseudoTrack(chH_cand).ndof() > 0
-                                                ? getValueNorm(candFunc::getPseudoTrack(chH_cand).ndof(), 13.92f, 6.581f)
-                                                : 0;
+        get(dnn::pfCand_chHad_track_ndof) =
+            candFunc::getPseudoTrack(chH_cand).ndof() > 0
+                ? getValueNorm(candFunc::getPseudoTrack(chH_cand).ndof(), 13.92f, 6.581f)
+                : 0;
       }
       float hcal_fraction = candFunc::getHCalFraction(chH_cand, disable_hcalFraction_workaround);
       get(dnn::pfCand_chHad_hcalFraction) = getValue(hcal_fraction);
@@ -1849,7 +1868,7 @@ namespace deeptau_helper {
     if (valid_nH) {
       size_t index_nH = cell_map.at(deep_tau_2017::CellObjectType::PfCand_neutralHadron);
       const auto& nH_cand = dynamic_cast<const CandidateCastType&>(pfCands.at(index_nH));
-  
+
       get(dnn::pfCand_nHad_valid) = valid_nH;
       get(dnn::pfCand_nHad_rel_pt) = getValueNorm(pfCands.at(index_nH).polarP4().pt() / tau.polarP4().pt(),
                                                   is_inner ? 0.3163f : 0.0502f,
@@ -1858,8 +1877,10 @@ namespace deeptau_helper {
                                                   is_inner ? -0.1f : -0.5f,
                                                   is_inner ? 0.1f : 0.5f,
                                                   false);
-      get(dnn::pfCand_nHad_dphi) = getValueLinear(
-          deep_tau_2017::dPhi(tau.polarP4(), pfCands.at(index_nH).polarP4()), is_inner ? -0.1f : -0.5f, is_inner ? 0.1f : 0.5f, false);
+      get(dnn::pfCand_nHad_dphi) = getValueLinear(deep_tau_2017::dPhi(tau.polarP4(), pfCands.at(index_nH).polarP4()),
+                                                  is_inner ? -0.1f : -0.5f,
+                                                  is_inner ? 0.1f : 0.5f,
+                                                  false);
       get(dnn::pfCand_nHad_puppiWeight) = is_inner ? getValue(candFunc::getPuppiWeight(nH_cand, 0.9798355f))
                                                    : getValue(candFunc::getPuppiWeight(nH_cand, 0.7813260f));
       get(dnn::pfCand_nHad_puppiWeightNoLep) = is_inner ? getValue(candFunc::getPuppiWeightNoLep(nH_cand, 0.9046796f))
@@ -1868,6 +1889,6 @@ namespace deeptau_helper {
       get(dnn::pfCand_nHad_hcalFraction) = getValue(hcal_fraction);
     }
   }
-}
+}  // namespace deeptau_helper
 
 #endif

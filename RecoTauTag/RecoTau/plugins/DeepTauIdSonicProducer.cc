@@ -464,8 +464,9 @@ void DeepTauIdSonicProducer::produce(edm::Event& iEvent, edm::EventSetup const& 
     std::copy(outputs_tauval[0].begin() + deep_tau::NumberOfOutputs * itau_passed,
               outputs_tauval[0].begin() + deep_tau::NumberOfOutputs * (itau_passed + 1),
               pred_all[tau_index].begin());
-    for (unsigned k = 0; k < deep_tau::NumberOfOutputs; ++k) 
-        std::cout << "tau index " << tau_index << " k " << k << " pred " << outputs_tauval[0][deep_tau::NumberOfOutputs * itau_passed + k] << std::endl;
+    for (unsigned k = 0; k < deep_tau::NumberOfOutputs; ++k)
+      std::cout << "tau index " << tau_index << " k " << k << " pred "
+                << outputs_tauval[0][deep_tau::NumberOfOutputs * itau_passed + k] << std::endl;
   }
 
   createOutputs(iEvent, pred_all, taus);
@@ -599,8 +600,18 @@ void DeepTauIdSonicProducer::createConvFeatures(const TauCastType& tau,
             idx, tau, tau_index, tau_ref, pv, rho, electrons, pfCands, cell, tau_funcs, is_inner, egammaBlockInputs);
         createMuonBlockInputs<CandidateCastType>(
             idx, tau, tau_index, tau_ref, pv, rho, muons, pfCands, cell, tau_funcs, is_inner, muonBlockInputs);
-        createHadronsBlockInputs<CandidateCastType>(
-            idx, tau, tau_index, tau_ref, pv, rho, pfCands, cell, tau_funcs, is_inner, hadronBlockInputs, disable_hcalFraction_workaround_);
+        createHadronsBlockInputs<CandidateCastType>(idx,
+                                                    tau,
+                                                    tau_index,
+                                                    tau_ref,
+                                                    pv,
+                                                    rho,
+                                                    pfCands,
+                                                    cell,
+                                                    tau_funcs,
+                                                    is_inner,
+                                                    hadronBlockInputs,
+                                                    disable_hcalFraction_workaround_);
 
         GridposInputs.push_back(tau_index);
         GridposInputs.push_back(eta_index);
