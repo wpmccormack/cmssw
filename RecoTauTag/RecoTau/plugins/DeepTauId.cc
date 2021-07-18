@@ -8,6 +8,7 @@
  */
 
 #include "RecoTauTag/RecoTau/interface/DeepTauBase.h"
+#include "RecoTauTag/RecoTau/interface/DeepTauHelper.h"
 
 namespace deep_tau {
   constexpr int NumberOfOutputs = 4;

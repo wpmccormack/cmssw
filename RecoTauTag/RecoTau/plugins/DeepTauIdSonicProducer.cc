@@ -1,7 +1,3 @@
-#include "FWCore/Utilities/interface/isFinite.h"
-#include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "DataFormats/TauReco/interface/PFTauTransverseImpactParameterAssociation.h"
-
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -10,32 +6,8 @@
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "HeterogeneousCore/SonicTriton/interface/TritonEDProducer.h"
-
-#include <Math/VectorUtil.h>
-#include "FWCore/Framework/interface/stream/EDProducer.h"
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "DataFormats/PatCandidates/interface/Electron.h"
-#include "DataFormats/PatCandidates/interface/Muon.h"
-#include "DataFormats/PatCandidates/interface/Tau.h"
-#include "DataFormats/TauReco/interface/TauDiscriminatorContainer.h"
-#include "DataFormats/TauReco/interface/PFTauDiscriminator.h"
-#include "DataFormats/PatCandidates/interface/PATTauDiscriminator.h"
-#include "CommonTools/Utils/interface/StringObjectFunction.h"
-#include "RecoTauTag/RecoTau/interface/PFRecoTauClusterVariables.h"
-#include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
-#include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
-#include "DataFormats/Common/interface/View.h"
-#include "DataFormats/Common/interface/RefToBase.h"
-#include "DataFormats/Provenance/interface/ProductProvenance.h"
-#include "DataFormats/Provenance/interface/ProcessHistoryID.h"
-#include "FWCore/Common/interface/Provenance.h"
-#include <map>
-
 #include "RecoTauTag/RecoTau/interface/DeepTauBase.h"
-
-#include <fstream>
-
-#include <vector>
+#include "RecoTauTag/RecoTau/interface/DeepTauHelper.h"
 
 namespace deep_tau {
   constexpr int NumberOfOutputs = 4;
