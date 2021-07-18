@@ -1226,15 +1226,647 @@ namespace deeptau_helper {
     }
   }
 
-  template <typename CandidateCastType, typename TauCastType>
+  template <typename CandidateCastType, typename TauCastType, typename TauBlockType>
   void createTauBlockInputs(const TauCastType& tau,
                             const size_t& tau_index,
                             const edm::RefToBase<reco::BaseTau> tau_ref,
                             const reco::Vertex& pv,
                             double rho,
-                            const TauFunc& tau_funcs,
-                            std::vector<float>& tauBlockInputs) {
+                            const deep_tau_2017::TauFunc& tau_funcs,
+                            TauBlockType& tauBlockInputs,
+							bool disable_dxy_pca) {
+    namespace dnn = deep_tau_2017::dnn_inputs_2017_v2::TauBlockInputs;
+	namespace candFunc = deep_tau_2017::candFunc;
+   
+    // TauBlockType should be a std::vector<float> (for the SonicProducer), 
+	// or a tensorflow::Tensor (for the direct inference producer)
+	const auto& get = [&](int var_index) -> float& {
+		if constexpr (std::is_same_v<TauBlockType, std::vector<float>>) {
+			return tauBlockInputs.at(var_index);
+		} else {
+			return ((tensorflow::Tensor)tauBlockInputs).tensor<float, 2>()(0, var_index);
+		}
+	};
 
+    auto leadChargedHadrCand = dynamic_cast<const CandidateCastType*>(tau.leadChargedHadrCand().get());
+
+    get(dnn::rho) = getValueNorm(rho, 21.49f, 9.713f);
+    get(dnn::tau_pt) = getValueLinear(tau.polarP4().pt(), 20.f, 1000.f, true);
+    get(dnn::tau_eta) = getValueLinear(tau.polarP4().eta(), -2.3f, 2.3f, false);
+    get(dnn::tau_phi) = getValueLinear(tau.polarP4().phi(), -pi, pi, false);
+    get(dnn::tau_mass) = getValueNorm(tau.polarP4().mass(), 0.6669f, 0.6553f);
+    get(dnn::tau_E_over_pt) = getValueLinear(tau.p4().energy() / tau.p4().pt(), 1.f, 5.2f, true);
+    get(dnn::tau_charge) = getValue(tau.charge());
+    get(dnn::tau_n_charged_prongs) = getValueLinear(tau.decayMode() / 5 + 1, 1, 3, true);
+    get(dnn::tau_n_neutral_prongs) = getValueLinear(tau.decayMode() % 5, 0, 2, true);
+    get(dnn::chargedIsoPtSum) = getValueNorm(tau_funcs.getChargedIsoPtSum(tau, tau_ref), 47.78f, 123.5f);
+    get(dnn::chargedIsoPtSumdR03_over_dR05) =
+        getValue(tau_funcs.getChargedIsoPtSumdR03(tau, tau_ref) / tau_funcs.getChargedIsoPtSum(tau, tau_ref));
+    get(dnn::footprintCorrection) = getValueNorm(tau_funcs.getFootprintCorrectiondR03(tau, tau_ref), 9.029f, 26.42f);
+    get(dnn::neutralIsoPtSum) = getValueNorm(tau_funcs.getNeutralIsoPtSum(tau, tau_ref), 57.59f, 155.3f);
+    get(dnn::neutralIsoPtSumWeight_over_neutralIsoPtSum) =
+        getValue(tau_funcs.getNeutralIsoPtSumWeight(tau, tau_ref) / tau_funcs.getNeutralIsoPtSum(tau, tau_ref));
+    get(dnn::neutralIsoPtSumWeightdR03_over_neutralIsoPtSum) =
+        getValue(tau_funcs.getNeutralIsoPtSumdR03Weight(tau, tau_ref) / tau_funcs.getNeutralIsoPtSum(tau, tau_ref));
+    get(dnn::neutralIsoPtSumdR03_over_dR05) =
+        getValue(tau_funcs.getNeutralIsoPtSumdR03(tau, tau_ref) / tau_funcs.getNeutralIsoPtSum(tau, tau_ref));
+    get(dnn::photonPtSumOutsideSignalCone) =
+        getValueNorm(tau_funcs.getPhotonPtSumOutsideSignalCone(tau, tau_ref), 1.731f, 6.846f);
+    get(dnn::puCorrPtSum) = getValueNorm(tau_funcs.getPuCorrPtSum(tau, tau_ref), 22.38f, 16.34f);
+    // The global PCA coordinates were used as inputs during the NN training, but it was decided to disable
+    // them for the inference, because modeling of dxy_PCA in MC poorly describes the data, and x and y coordinates
+    // in data results outside of the expected 5 std. dev. input validity range. On the other hand,
+    // these coordinates are strongly era-dependent. Kept as comment to document what NN expects.
+    if (!disable_dxy_pca) {
+      auto const pca = tau_funcs.getdxyPCA(tau, tau_index);
+      get(dnn::tau_dxy_pca_x) = getValueNorm(pca.x(), -0.0241f, 0.0074f);
+      get(dnn::tau_dxy_pca_y) = getValueNorm(pca.y(), 0.0675f, 0.0128f);
+      get(dnn::tau_dxy_pca_z) = getValueNorm(pca.z(), 0.7973f, 3.456f);
+    } else {
+      get(dnn::tau_dxy_pca_x) = 0;
+      get(dnn::tau_dxy_pca_y) = 0;
+      get(dnn::tau_dxy_pca_z) = 0;
+    }
+    const bool tau_dxy_valid =
+        isAbove(tau_funcs.getdxy(tau, tau_index), -10) && isAbove(tau_funcs.getdxyError(tau, tau_index), 0);
+    if (tau_dxy_valid) {
+      get(dnn::tau_dxy_valid) = tau_dxy_valid;
+      get(dnn::tau_dxy) = getValueNorm(tau_funcs.getdxy(tau, tau_index), 0.0018f, 0.0085f);
+      get(dnn::tau_dxy_sig) =
+          getValueNorm(std::abs(tau_funcs.getdxy(tau, tau_index)) / tau_funcs.getdxyError(tau, tau_index), 2.26f, 4.191f);
+    }
+    const bool tau_ip3d_valid =
+        isAbove(tau_funcs.getip3d(tau, tau_index), -10) && isAbove(tau_funcs.getip3dError(tau, tau_index), 0);
+    if (tau_ip3d_valid) {
+      get(dnn::tau_ip3d_valid) = tau_ip3d_valid;
+      get(dnn::tau_ip3d) = getValueNorm(tau_funcs.getip3d(tau, tau_index), 0.0026f, 0.0114f);
+      get(dnn::tau_ip3d_sig) = getValueNorm(
+          std::abs(tau_funcs.getip3d(tau, tau_index)) / tau_funcs.getip3dError(tau, tau_index), 2.928f, 4.466f);
+    }
+    if (leadChargedHadrCand) {
+      const bool hasTrackDetails = candFunc::getHasTrackDetails(*leadChargedHadrCand);
+      const float tau_dz = (!hasTrackDetails) ? 0 : candFunc::getTauDz(*leadChargedHadrCand);
+      get(dnn::tau_dz) = getValueNorm(tau_dz, 0.f, 0.0190f);
+      get(dnn::tau_dz_sig_valid) = candFunc::getTauDZSigValid(*leadChargedHadrCand);
+      const double dzError = hasTrackDetails ? leadChargedHadrCand->dzError() : -999.;
+      get(dnn::tau_dz_sig) = getValueNorm(std::abs(tau_dz) / dzError, 4.717f, 11.78f);
+    }
+    get(dnn::tau_flightLength_x) = getValueNorm(tau_funcs.getFlightLength(tau, tau_index).x(), -0.0003f, 0.7362f);
+    get(dnn::tau_flightLength_y) = getValueNorm(tau_funcs.getFlightLength(tau, tau_index).y(), -0.0009f, 0.7354f);
+    get(dnn::tau_flightLength_z) = getValueNorm(tau_funcs.getFlightLength(tau, tau_index).z(), -0.0022f, 1.993f);
+    get(dnn::tau_flightLength_sig) = 0.55756444;  //This value is set due to a bug in the training
+    get(dnn::tau_pt_weighted_deta_strip) =
+        getValueLinear(reco::tau::pt_weighted_deta_strip(tau, tau.decayMode()), 0, 1, true);
+
+    get(dnn::tau_pt_weighted_dphi_strip) =
+        getValueLinear(reco::tau::pt_weighted_dphi_strip(tau, tau.decayMode()), 0, 1, true);
+    get(dnn::tau_pt_weighted_dr_signal) =
+        getValueNorm(reco::tau::pt_weighted_dr_signal(tau, tau.decayMode()), 0.0052f, 0.01433f);
+    get(dnn::tau_pt_weighted_dr_iso) = getValueLinear(reco::tau::pt_weighted_dr_iso(tau, tau.decayMode()), 0, 1, true);
+    get(dnn::tau_leadingTrackNormChi2) = getValueNorm(tau_funcs.getLeadingTrackNormChi2(tau), 1.538f, 4.401f);
+    const auto eratio = reco::tau::eratio(tau);
+    const bool tau_e_ratio_valid = std::isnormal(eratio) && eratio > 0.f;
+    get(dnn::tau_e_ratio_valid) = tau_e_ratio_valid;
+    get(dnn::tau_e_ratio) = tau_e_ratio_valid ? getValueLinear(eratio, 0, 1, true) : 0.f;
+    const double gj_angle_diff = calculateGottfriedJacksonAngleDifference(tau, tau_index, tau_funcs);
+    const bool tau_gj_angle_diff_valid = (std::isnormal(gj_angle_diff) || gj_angle_diff == 0) && gj_angle_diff >= 0;
+    get(dnn::tau_gj_angle_diff_valid) = tau_gj_angle_diff_valid;
+    get(dnn::tau_gj_angle_diff) = tau_gj_angle_diff_valid ? getValueLinear(gj_angle_diff, 0, pi, true) : 0;
+    get(dnn::tau_n_photons) = getValueNorm(reco::tau::n_photons_total(tau), 2.95f, 3.927f);
+    get(dnn::tau_emFraction) = getValueLinear(tau_funcs.getEmFraction(tau), -1, 1, false);
+
+    get(dnn::tau_inside_ecal_crack) = getValue(isInEcalCrack(tau.p4().eta()));
+    get(dnn::leadChargedCand_etaAtEcalEntrance_minus_tau_eta) =
+        getValueNorm(tau_funcs.getEtaAtEcalEntrance(tau) - tau.p4().eta(), 0.0042f, 0.0323f);
+  }
+
+
+  template <typename CandidateCastType, typename TauCastType, typename EgammaBlockType>
+  void createEgammaBlockInputs(unsigned idx,
+                               const TauCastType& tau,
+                               const size_t tau_index,
+                               const edm::RefToBase<reco::BaseTau> tau_ref,
+                               const reco::Vertex& pv,
+                               double rho,
+                               const std::vector<pat::Electron>* electrons,
+                               const edm::View<reco::Candidate>& pfCands,
+                               const deep_tau_2017::Cell& cell_map,
+                               const deep_tau_2017::TauFunc& tau_funcs,
+                               bool is_inner,
+							   EgammaBlockType& egammaBlockInputs) {
+    namespace dnn = deep_tau_2017::dnn_inputs_2017_v2::EgammaBlockInputs;
+	namespace candFunc = deep_tau_2017::candFunc;
+
+	// EgammaBlockType should be a std::vector<float> (for the SonicProducer),
+    // or a tensorflow::Tensor (for the direct inference producer)
+    const auto& get = [&](int var_index) -> float& {
+        if constexpr (std::is_same_v<EgammaBlockType, std::vector<float>>) {
+			return egammaBlockInputs.at(var_index + idx * dnn::NumberOfInputs);
+        } else {
+			return ((tensorflow::Tensor)egammaBlockInputs).tensor<float, 4>()(idx, 0, 0, var_index);
+        }
+    };
+  
+    const bool valid_index_pf_ele = cell_map.count(deep_tau_2017::CellObjectType::PfCand_electron);
+    const bool valid_index_pf_gamma = cell_map.count(deep_tau_2017::CellObjectType::PfCand_gamma);
+    const bool valid_index_ele = cell_map.count(deep_tau_2017::CellObjectType::Electron);
+  
+    if (!cell_map.empty()) {
+      get(dnn::rho) = getValueNorm(rho, 21.49f, 9.713f);
+      get(dnn::tau_pt) = getValueLinear(tau.polarP4().pt(), 20.f, 1000.f, true);
+      get(dnn::tau_eta) = getValueLinear(tau.polarP4().eta(), -2.3f, 2.3f, false);
+      get(dnn::tau_inside_ecal_crack) = getValue(isInEcalCrack(tau.polarP4().eta()));
+    }
+    if (valid_index_pf_ele) {
+      size_t index_pf_ele = cell_map.at(deep_tau_2017::CellObjectType::PfCand_electron);
+      const auto& ele_cand = dynamic_cast<const CandidateCastType&>(pfCands.at(index_pf_ele));
+  
+      get(dnn::pfCand_ele_valid) = valid_index_pf_ele;
+      get(dnn::pfCand_ele_rel_pt) = getValueNorm(pfCands.at(index_pf_ele).polarP4().pt() / tau.polarP4().pt(),
+                                                 is_inner ? 0.9792f : 0.304f,
+                                                 is_inner ? 0.5383f : 1.845f);
+      get(dnn::pfCand_ele_deta) = getValueLinear(pfCands.at(index_pf_ele).polarP4().eta() - tau.polarP4().eta(),
+                                                 is_inner ? -0.1f : -0.5f,
+                                                 is_inner ? 0.1f : 0.5f,
+                                                 false);
+      get(dnn::pfCand_ele_dphi) = getValueLinear(deep_tau_2017::dPhi(tau.polarP4(), pfCands.at(index_pf_ele).polarP4()),
+                                                 is_inner ? -0.1f : -0.5f,
+                                                 is_inner ? 0.1f : 0.5f,
+                                                 false);
+      get(dnn::pfCand_ele_pvAssociationQuality) =
+          getValueLinear<int>(candFunc::getPvAssocationQuality(ele_cand), 0, 7, true);
+      get(dnn::pfCand_ele_puppiWeight) = is_inner ? getValue(candFunc::getPuppiWeight(ele_cand, 0.9906834f))
+                                                  : getValue(candFunc::getPuppiWeight(ele_cand, 0.9669586f));
+      get(dnn::pfCand_ele_charge) = getValue(ele_cand.charge());
+      get(dnn::pfCand_ele_lostInnerHits) = getValue<int>(candFunc::getLostInnerHits(ele_cand, 0));
+      get(dnn::pfCand_ele_numberOfPixelHits) = getValueLinear(candFunc::getNumberOfPixelHits(ele_cand, 0), 0, 10, true);
+      get(dnn::pfCand_ele_vertex_dx) =
+          getValueNorm(pfCands.at(index_pf_ele).vertex().x() - pv.position().x(), 0.f, 0.1221f);
+      get(dnn::pfCand_ele_vertex_dy) =
+          getValueNorm(pfCands.at(index_pf_ele).vertex().y() - pv.position().y(), 0.f, 0.1226f);
+      get(dnn::pfCand_ele_vertex_dz) =
+          getValueNorm(pfCands.at(index_pf_ele).vertex().z() - pv.position().z(), 0.001f, 1.024f);
+      get(dnn::pfCand_ele_vertex_dx_tauFL) = getValueNorm(
+          pfCands.at(index_pf_ele).vertex().x() - pv.position().x() - tau_funcs.getFlightLength(tau, tau_index).x(),
+          0.f,
+          0.3411f);
+      get(dnn::pfCand_ele_vertex_dy_tauFL) = getValueNorm(
+          pfCands.at(index_pf_ele).vertex().y() - pv.position().y() - tau_funcs.getFlightLength(tau, tau_index).y(),
+          0.0003f,
+          0.3385f);
+      get(dnn::pfCand_ele_vertex_dz_tauFL) = getValueNorm(
+          pfCands.at(index_pf_ele).vertex().z() - pv.position().z() - tau_funcs.getFlightLength(tau, tau_index).z(),
+          0.f,
+          1.307f);
+  
+      const bool hasTrackDetails = candFunc::getHasTrackDetails(ele_cand);
+      if (hasTrackDetails) {
+        get(dnn::pfCand_ele_hasTrackDetails) = hasTrackDetails;
+        get(dnn::pfCand_ele_dxy) = getValueNorm(candFunc::getTauDxy(ele_cand), 0.f, 0.171f);
+        get(dnn::pfCand_ele_dxy_sig) =
+            getValueNorm(std::abs(candFunc::getTauDxy(ele_cand)) / pfCands.at(index_pf_ele).dxyError(), 1.634f, 6.45f);
+        get(dnn::pfCand_ele_dz) = getValueNorm(candFunc::getTauDz(ele_cand), 0.001f, 1.02f);
+        get(dnn::pfCand_ele_dz_sig) =
+            getValueNorm(std::abs(candFunc::getTauDz(ele_cand)) / ele_cand.dzError(), 24.56f, 210.4f);
+        get(dnn::pfCand_ele_track_chi2_ndof) = getValueNorm(
+            candFunc::getPseudoTrack(ele_cand).chi2() / candFunc::getPseudoTrack(ele_cand).ndof(), 2.272f, 8.439f);
+        get(dnn::pfCand_ele_track_ndof) = getValueNorm(candFunc::getPseudoTrack(ele_cand).ndof(), 15.18f, 3.203f);
+      }
+    }
+    if (valid_index_pf_gamma) {
+      size_t index_pf_gamma = cell_map.at(deep_tau_2017::CellObjectType::PfCand_gamma);
+      const auto& gamma_cand = dynamic_cast<const CandidateCastType&>(pfCands.at(index_pf_gamma));
+  
+      get(dnn::pfCand_gamma_valid) = valid_index_pf_gamma;
+      get(dnn::pfCand_gamma_rel_pt) = getValueNorm(pfCands.at(index_pf_gamma).polarP4().pt() / tau.polarP4().pt(),
+                                                   is_inner ? 0.6048f : 0.02576f,
+                                                   is_inner ? 1.669f : 0.3833f);
+      get(dnn::pfCand_gamma_deta) = getValueLinear(pfCands.at(index_pf_gamma).polarP4().eta() - tau.polarP4().eta(),
+                                                   is_inner ? -0.1f : -0.5f,
+                                                   is_inner ? 0.1f : 0.5f,
+                                                   false);
+      get(dnn::pfCand_gamma_dphi) = getValueLinear(deep_tau_2017::dPhi(tau.polarP4(), pfCands.at(index_pf_gamma).polarP4()),
+                                                   is_inner ? -0.1f : -0.5f,
+                                                   is_inner ? 0.1f : 0.5f,
+                                                   false);
+      get(dnn::pfCand_gamma_pvAssociationQuality) =
+          getValueLinear<int>(candFunc::getPvAssocationQuality(gamma_cand), 0, 7, true);
+      get(dnn::pfCand_gamma_fromPV) = getValueLinear<int>(candFunc::getFromPV(gamma_cand), 0, 3, true);
+      get(dnn::pfCand_gamma_puppiWeight) = is_inner ? getValue(candFunc::getPuppiWeight(gamma_cand, 0.9084110f))
+                                                    : getValue(candFunc::getPuppiWeight(gamma_cand, 0.4211567f));
+      get(dnn::pfCand_gamma_puppiWeightNoLep) = is_inner
+                                                    ? getValue(candFunc::getPuppiWeightNoLep(gamma_cand, 0.8857716f))
+                                                    : getValue(candFunc::getPuppiWeightNoLep(gamma_cand, 0.3822604f));
+      get(dnn::pfCand_gamma_lostInnerHits) = getValue<int>(candFunc::getLostInnerHits(gamma_cand, 0));
+      get(dnn::pfCand_gamma_numberOfPixelHits) =
+          getValueLinear(candFunc::getNumberOfPixelHits(gamma_cand, 0), 0, 7, true);
+      get(dnn::pfCand_gamma_vertex_dx) =
+          getValueNorm(pfCands.at(index_pf_gamma).vertex().x() - pv.position().x(), 0.f, 0.0067f);
+      get(dnn::pfCand_gamma_vertex_dy) =
+          getValueNorm(pfCands.at(index_pf_gamma).vertex().y() - pv.position().y(), 0.f, 0.0069f);
+      get(dnn::pfCand_gamma_vertex_dz) =
+          getValueNorm(pfCands.at(index_pf_gamma).vertex().z() - pv.position().z(), 0.f, 0.0578f);
+      get(dnn::pfCand_gamma_vertex_dx_tauFL) = getValueNorm(
+          pfCands.at(index_pf_gamma).vertex().x() - pv.position().x() - tau_funcs.getFlightLength(tau, tau_index).x(),
+          0.001f,
+          0.9565f);
+      get(dnn::pfCand_gamma_vertex_dy_tauFL) = getValueNorm(
+          pfCands.at(index_pf_gamma).vertex().y() - pv.position().y() - tau_funcs.getFlightLength(tau, tau_index).y(),
+          0.0008f,
+          0.9592f);
+      get(dnn::pfCand_gamma_vertex_dz_tauFL) = getValueNorm(
+          pfCands.at(index_pf_gamma).vertex().z() - pv.position().z() - tau_funcs.getFlightLength(tau, tau_index).z(),
+          0.0038f,
+          2.154f);
+      const bool hasTrackDetails = candFunc::getHasTrackDetails(gamma_cand);
+      if (hasTrackDetails) {
+        get(dnn::pfCand_gamma_hasTrackDetails) = hasTrackDetails;
+        get(dnn::pfCand_gamma_dxy) = getValueNorm(candFunc::getTauDxy(gamma_cand), 0.0004f, 0.882f);
+        get(dnn::pfCand_gamma_dxy_sig) =
+            getValueNorm(std::abs(candFunc::getTauDxy(gamma_cand)) / gamma_cand.dxyError(), 4.271f, 63.78f);
+        get(dnn::pfCand_gamma_dz) = getValueNorm(candFunc::getTauDz(gamma_cand), 0.0071f, 5.285f);
+        get(dnn::pfCand_gamma_dz_sig) =
+            getValueNorm(std::abs(candFunc::getTauDz(gamma_cand)) / gamma_cand.dzError(), 162.1f, 622.4f);
+        get(dnn::pfCand_gamma_track_chi2_ndof) =
+            candFunc::getPseudoTrack(gamma_cand).ndof() > 0
+                ? getValueNorm(candFunc::getPseudoTrack(gamma_cand).chi2() / candFunc::getPseudoTrack(gamma_cand).ndof(),
+                               4.268f,
+                               15.47f)
+                : 0;
+        get(dnn::pfCand_gamma_track_ndof) =
+            candFunc::getPseudoTrack(gamma_cand).ndof() > 0
+                ? getValueNorm(candFunc::getPseudoTrack(gamma_cand).ndof(), 12.25f, 4.774f)
+                : 0;
+      }
+    }
+    if (valid_index_ele) {
+      size_t index_ele = cell_map.at(deep_tau_2017::CellObjectType::Electron);
+  
+      get(dnn::ele_valid) = valid_index_ele;
+      get(dnn::ele_rel_pt) = getValueNorm(electrons->at(index_ele).polarP4().pt() / tau.polarP4().pt(),
+                                          is_inner ? 1.067f : 0.5111f,
+                                          is_inner ? 1.521f : 2.765f);
+      get(dnn::ele_deta) = getValueLinear(electrons->at(index_ele).polarP4().eta() - tau.polarP4().eta(),
+                                          is_inner ? -0.1f : -0.5f,
+                                          is_inner ? 0.1f : 0.5f,
+                                          false);
+      get(dnn::ele_dphi) = getValueLinear(deep_tau_2017::dPhi(tau.polarP4(), electrons->at(index_ele).polarP4()),
+                                          is_inner ? -0.1f : -0.5f,
+                                          is_inner ? 0.1f : 0.5f,
+                                          false);
+  
+      float cc_ele_energy, cc_gamma_energy;
+      int cc_n_gamma;
+      const bool cc_valid =
+          calculateElectronClusterVarsV2(electrons->at(index_ele), cc_ele_energy, cc_gamma_energy, cc_n_gamma);
+      if (cc_valid) {
+        get(dnn::ele_cc_valid) = cc_valid;
+        get(dnn::ele_cc_ele_rel_energy) =
+            getValueNorm(cc_ele_energy / electrons->at(index_ele).polarP4().pt(), 1.729f, 1.644f);
+        get(dnn::ele_cc_gamma_rel_energy) = getValueNorm(cc_gamma_energy / cc_ele_energy, 0.1439f, 0.3284f);
+        get(dnn::ele_cc_n_gamma) = getValueNorm(cc_n_gamma, 1.794f, 2.079f);
+      }
+      get(dnn::ele_rel_trackMomentumAtVtx) = getValueNorm(
+          electrons->at(index_ele).trackMomentumAtVtx().R() / electrons->at(index_ele).polarP4().pt(), 1.531f, 1.424f);
+      get(dnn::ele_rel_trackMomentumAtCalo) = getValueNorm(
+          electrons->at(index_ele).trackMomentumAtCalo().R() / electrons->at(index_ele).polarP4().pt(), 1.531f, 1.424f);
+      get(dnn::ele_rel_trackMomentumOut) = getValueNorm(
+          electrons->at(index_ele).trackMomentumOut().R() / electrons->at(index_ele).polarP4().pt(), 0.7735f, 0.935f);
+      get(dnn::ele_rel_trackMomentumAtEleClus) =
+          getValueNorm(electrons->at(index_ele).trackMomentumAtEleClus().R() / electrons->at(index_ele).polarP4().pt(),
+                       0.7735f,
+                       0.935f);
+      get(dnn::ele_rel_trackMomentumAtVtxWithConstraint) = getValueNorm(
+          electrons->at(index_ele).trackMomentumAtVtxWithConstraint().R() / electrons->at(index_ele).polarP4().pt(),
+          1.625f,
+          1.581f);
+      get(dnn::ele_rel_ecalEnergy) =
+          getValueNorm(electrons->at(index_ele).ecalEnergy() / electrons->at(index_ele).polarP4().pt(), 1.993f, 1.308f);
+      get(dnn::ele_ecalEnergy_sig) = getValueNorm(
+          electrons->at(index_ele).ecalEnergy() / electrons->at(index_ele).ecalEnergyError(), 70.25f, 58.16f);
+      get(dnn::ele_eSuperClusterOverP) = getValueNorm(electrons->at(index_ele).eSuperClusterOverP(), 2.432f, 15.13f);
+      get(dnn::ele_eSeedClusterOverP) = getValueNorm(electrons->at(index_ele).eSeedClusterOverP(), 2.034f, 13.96f);
+      get(dnn::ele_eSeedClusterOverPout) = getValueNorm(electrons->at(index_ele).eSeedClusterOverPout(), 6.64f, 36.8f);
+      get(dnn::ele_eEleClusterOverPout) = getValueNorm(electrons->at(index_ele).eEleClusterOverPout(), 4.183f, 20.63f);
+      get(dnn::ele_deltaEtaSuperClusterTrackAtVtx) =
+          getValueNorm(electrons->at(index_ele).deltaEtaSuperClusterTrackAtVtx(), 0.f, 0.0363f);
+      get(dnn::ele_deltaEtaSeedClusterTrackAtCalo) =
+          getValueNorm(electrons->at(index_ele).deltaEtaSeedClusterTrackAtCalo(), -0.0001f, 0.0512f);
+      get(dnn::ele_deltaEtaEleClusterTrackAtCalo) =
+          getValueNorm(electrons->at(index_ele).deltaEtaEleClusterTrackAtCalo(), -0.0001f, 0.0541f);
+      get(dnn::ele_deltaPhiEleClusterTrackAtCalo) =
+          getValueNorm(electrons->at(index_ele).deltaPhiEleClusterTrackAtCalo(), 0.0002f, 0.0553f);
+      get(dnn::ele_deltaPhiSuperClusterTrackAtVtx) =
+          getValueNorm(electrons->at(index_ele).deltaPhiSuperClusterTrackAtVtx(), 0.0001f, 0.0523f);
+      get(dnn::ele_deltaPhiSeedClusterTrackAtCalo) =
+          getValueNorm(electrons->at(index_ele).deltaPhiSeedClusterTrackAtCalo(), 0.0004f, 0.0777f);
+      get(dnn::ele_mvaInput_earlyBrem) = getValue(electrons->at(index_ele).mvaInput().earlyBrem);
+      get(dnn::ele_mvaInput_lateBrem) = getValue(electrons->at(index_ele).mvaInput().lateBrem);
+      get(dnn::ele_mvaInput_sigmaEtaEta) =
+          getValueNorm(electrons->at(index_ele).mvaInput().sigmaEtaEta, 0.0008f, 0.0052f);
+      get(dnn::ele_mvaInput_hadEnergy) = getValueNorm(electrons->at(index_ele).mvaInput().hadEnergy, 14.04f, 69.48f);
+      get(dnn::ele_mvaInput_deltaEta) = getValueNorm(electrons->at(index_ele).mvaInput().deltaEta, 0.0099f, 0.0851f);
+      const auto& gsfTrack = electrons->at(index_ele).gsfTrack();
+      if (gsfTrack.isNonnull()) {
+        get(dnn::ele_gsfTrack_normalizedChi2) = getValueNorm(gsfTrack->normalizedChi2(), 3.049f, 10.39f);
+        get(dnn::ele_gsfTrack_numberOfValidHits) = getValueNorm(gsfTrack->numberOfValidHits(), 16.52f, 2.806f);
+        get(dnn::ele_rel_gsfTrack_pt) =
+            getValueNorm(gsfTrack->pt() / electrons->at(index_ele).polarP4().pt(), 1.355f, 16.81f);
+        get(dnn::ele_gsfTrack_pt_sig) = getValueNorm(gsfTrack->pt() / gsfTrack->ptError(), 5.046f, 3.119f);
+      }
+      const auto& closestCtfTrack = electrons->at(index_ele).closestCtfTrackRef();
+      const bool has_closestCtfTrack = closestCtfTrack.isNonnull();
+      if (has_closestCtfTrack) {
+        get(dnn::ele_has_closestCtfTrack) = has_closestCtfTrack;
+        get(dnn::ele_closestCtfTrack_normalizedChi2) = getValueNorm(closestCtfTrack->normalizedChi2(), 2.411f, 6.98f);
+        get(dnn::ele_closestCtfTrack_numberOfValidHits) =
+            getValueNorm(closestCtfTrack->numberOfValidHits(), 15.16f, 5.26f);
+      }
+    }
+  }
+ 
+  template <typename CandidateCastType, typename TauCastType, typename MuonBlockType>
+  void createMuonBlockInputs(unsigned idx,
+                             const TauCastType& tau,
+                             const size_t tau_index,
+                             const edm::RefToBase<reco::BaseTau> tau_ref,
+                             const reco::Vertex& pv,
+                             double rho,
+                             const std::vector<pat::Muon>* muons,
+                             const edm::View<reco::Candidate>& pfCands,
+                             const deep_tau_2017::Cell& cell_map,
+                             const deep_tau_2017::TauFunc& tau_funcs,
+                             bool is_inner,
+                             MuonBlockType& muonBlockInputs) {
+    namespace dnn = deep_tau_2017::dnn_inputs_2017_v2::MuonBlockInputs;
+	namespace candFunc = deep_tau_2017::candFunc;
+
+	// MuonBlockType should be a std::vector<float> (for the SonicProducer),
+    // or a tensorflow::Tensor (for the direct inference producer)
+    const auto& get = [&](int var_index) -> float& {
+        if constexpr (std::is_same_v<MuonBlockType, std::vector<float>>) {
+            return muonBlockInputs.at(var_index + idx * dnn::NumberOfInputs);
+        } else {
+            return ((tensorflow::Tensor)muonBlockInputs).tensor<float, 4>()(idx, 0, 0, var_index);
+        }
+    };
+  
+    const bool valid_index_pf_muon = cell_map.count(deep_tau_2017::CellObjectType::PfCand_muon);
+    const bool valid_index_muon = cell_map.count(deep_tau_2017::CellObjectType::Muon);
+  
+    if (!cell_map.empty()) {
+      get(dnn::rho) = getValueNorm(rho, 21.49f, 9.713f);
+      get(dnn::tau_pt) = getValueLinear(tau.polarP4().pt(), 20.f, 1000.f, true);
+      get(dnn::tau_eta) = getValueLinear(tau.polarP4().eta(), -2.3f, 2.3f, false);
+      get(dnn::tau_inside_ecal_crack) = getValue(isInEcalCrack(tau.polarP4().eta()));
+    }
+    if (valid_index_pf_muon) {
+      size_t index_pf_muon = cell_map.at(deep_tau_2017::CellObjectType::PfCand_muon);
+      const auto& muon_cand = dynamic_cast<const CandidateCastType&>(pfCands.at(index_pf_muon));
+  
+      get(dnn::pfCand_muon_valid) = valid_index_pf_muon;
+      get(dnn::pfCand_muon_rel_pt) = getValueNorm(pfCands.at(index_pf_muon).polarP4().pt() / tau.polarP4().pt(),
+                                                  is_inner ? 0.9509f : 0.0861f,
+                                                  is_inner ? 0.4294f : 0.4065f);
+      get(dnn::pfCand_muon_deta) = getValueLinear(pfCands.at(index_pf_muon).polarP4().eta() - tau.polarP4().eta(),
+                                                  is_inner ? -0.1f : -0.5f,
+                                                  is_inner ? 0.1f : 0.5f,
+                                                  false);
+      get(dnn::pfCand_muon_dphi) = getValueLinear(deep_tau_2017::dPhi(tau.polarP4(), pfCands.at(index_pf_muon).polarP4()),
+                                                  is_inner ? -0.1f : -0.5f,
+                                                  is_inner ? 0.1f : 0.5f,
+                                                  false);
+      get(dnn::pfCand_muon_pvAssociationQuality) =
+          getValueLinear<int>(candFunc::getPvAssocationQuality(muon_cand), 0, 7, true);
+      get(dnn::pfCand_muon_fromPV) = getValueLinear<int>(candFunc::getFromPV(muon_cand), 0, 3, true);
+      get(dnn::pfCand_muon_puppiWeight) = is_inner ? getValue(candFunc::getPuppiWeight(muon_cand, 0.9786588f))
+                                                   : getValue(candFunc::getPuppiWeight(muon_cand, 0.8132477f));
+      get(dnn::pfCand_muon_charge) = getValue(muon_cand.charge());
+      get(dnn::pfCand_muon_lostInnerHits) = getValue<int>(candFunc::getLostInnerHits(muon_cand, 0));
+      get(dnn::pfCand_muon_numberOfPixelHits) = getValueLinear(candFunc::getNumberOfPixelHits(muon_cand, 0), 0, 11, true);
+      get(dnn::pfCand_muon_vertex_dx) =
+          getValueNorm(pfCands.at(index_pf_muon).vertex().x() - pv.position().x(), -0.0007f, 0.6869f);
+      get(dnn::pfCand_muon_vertex_dy) =
+          getValueNorm(pfCands.at(index_pf_muon).vertex().y() - pv.position().y(), 0.0001f, 0.6784f);
+      get(dnn::pfCand_muon_vertex_dz) =
+          getValueNorm(pfCands.at(index_pf_muon).vertex().z() - pv.position().z(), -0.0117f, 4.097f);
+      get(dnn::pfCand_muon_vertex_dx_tauFL) = getValueNorm(
+          pfCands.at(index_pf_muon).vertex().x() - pv.position().x() - tau_funcs.getFlightLength(tau, tau_index).x(),
+          -0.0001f,
+          0.8642f);
+      get(dnn::pfCand_muon_vertex_dy_tauFL) = getValueNorm(
+          pfCands.at(index_pf_muon).vertex().y() - pv.position().y() - tau_funcs.getFlightLength(tau, tau_index).y(),
+          0.0004f,
+          0.8561f);
+      get(dnn::pfCand_muon_vertex_dz_tauFL) = getValueNorm(
+          pfCands.at(index_pf_muon).vertex().z() - pv.position().z() - tau_funcs.getFlightLength(tau, tau_index).z(),
+          -0.0118f,
+          4.405f);
+  
+      const bool hasTrackDetails = candFunc::getHasTrackDetails(muon_cand);
+      if (hasTrackDetails) {
+        get(dnn::pfCand_muon_hasTrackDetails) = hasTrackDetails;
+        get(dnn::pfCand_muon_dxy) = getValueNorm(candFunc::getTauDxy(muon_cand), -0.0045f, 0.9655f);
+        get(dnn::pfCand_muon_dxy_sig) =
+            getValueNorm(std::abs(candFunc::getTauDxy(muon_cand)) / muon_cand.dxyError(), 4.575f, 42.36f);
+        get(dnn::pfCand_muon_dz) = getValueNorm(candFunc::getTauDz(muon_cand), -0.0117f, 4.097f);
+        get(dnn::pfCand_muon_dz_sig) =
+            getValueNorm(std::abs(candFunc::getTauDz(muon_cand)) / muon_cand.dzError(), 80.37f, 343.3f);
+        get(dnn::pfCand_muon_track_chi2_ndof) = getValueNorm(
+            candFunc::getPseudoTrack(muon_cand).chi2() / candFunc::getPseudoTrack(muon_cand).ndof(), 0.69f, 1.711f);
+        get(dnn::pfCand_muon_track_ndof) = getValueNorm(candFunc::getPseudoTrack(muon_cand).ndof(), 17.5f, 5.11f);
+      }
+    }
+    if (valid_index_muon) {
+      size_t index_muon = cell_map.at(deep_tau_2017::CellObjectType::Muon);
+  
+      get(dnn::muon_valid) = valid_index_muon;
+      get(dnn::muon_rel_pt) = getValueNorm(muons->at(index_muon).polarP4().pt() / tau.polarP4().pt(),
+                                           is_inner ? 0.7966f : 0.2678f,
+                                           is_inner ? 3.402f : 3.592f);
+      get(dnn::muon_deta) = getValueLinear(muons->at(index_muon).polarP4().eta() - tau.polarP4().eta(),
+                                           is_inner ? -0.1f : -0.5f,
+                                           is_inner ? 0.1f : 0.5f,
+                                           false);
+      get(dnn::muon_dphi) = getValueLinear(
+          deep_tau_2017::dPhi(tau.polarP4(), muons->at(index_muon).polarP4()), is_inner ? -0.1f : -0.5f, is_inner ? 0.1f : 0.5f, false);
+      get(dnn::muon_dxy) = getValueNorm(muons->at(index_muon).dB(pat::Muon::PV2D), 0.0019f, 1.039f);
+      get(dnn::muon_dxy_sig) =
+          getValueNorm(std::abs(muons->at(index_muon).dB(pat::Muon::PV2D)) / muons->at(index_muon).edB(pat::Muon::PV2D),
+                       8.98f,
+                       71.17f);
+  
+      const bool normalizedChi2_valid =
+          muons->at(index_muon).globalTrack().isNonnull() && muons->at(index_muon).normChi2() >= 0;
+      if (normalizedChi2_valid) {
+        get(dnn::muon_normalizedChi2_valid) = normalizedChi2_valid;
+        get(dnn::muon_normalizedChi2) = getValueNorm(muons->at(index_muon).normChi2(), 21.52f, 265.8f);
+        if (muons->at(index_muon).innerTrack().isNonnull())
+          get(dnn::muon_numberOfValidHits) = getValueNorm(muons->at(index_muon).numberOfValidHits(), 21.84f, 10.59f);
+      }
+      get(dnn::muon_segmentCompatibility) = getValue(muons->at(index_muon).segmentCompatibility());
+      get(dnn::muon_caloCompatibility) = getValue(muons->at(index_muon).caloCompatibility());
+  
+      const bool pfEcalEnergy_valid = muons->at(index_muon).pfEcalEnergy() >= 0;
+      if (pfEcalEnergy_valid) {
+        get(dnn::muon_pfEcalEnergy_valid) = pfEcalEnergy_valid;
+        get(dnn::muon_rel_pfEcalEnergy) =
+            getValueNorm(muons->at(index_muon).pfEcalEnergy() / muons->at(index_muon).polarP4().pt(), 0.2273f, 0.4865f);
+      }
+  
+      deep_tau_2017::MuonHitMatchV2 hit_match(muons->at(index_muon));
+      static const std::map<int, std::pair<int, int>> muonMatchHitVars = {
+          {MuonSubdetId::DT, {dnn::muon_n_matches_DT_1, dnn::muon_n_hits_DT_1}},
+          {MuonSubdetId::CSC, {dnn::muon_n_matches_CSC_1, dnn::muon_n_hits_CSC_1}},
+          {MuonSubdetId::RPC, {dnn::muon_n_matches_RPC_1, dnn::muon_n_hits_RPC_1}}};
+  
+      static const std::map<int, std::vector<float>> muonMatchVarLimits = {
+          {MuonSubdetId::DT, {2, 2, 2, 2}}, {MuonSubdetId::CSC, {6, 2, 2, 2}}, {MuonSubdetId::RPC, {7, 6, 4, 4}}};
+  
+      static const std::map<int, std::vector<float>> muonHitVarLimits = {
+          {MuonSubdetId::DT, {12, 12, 12, 8}}, {MuonSubdetId::CSC, {24, 12, 12, 12}}, {MuonSubdetId::RPC, {4, 4, 2, 2}}};
+  
+      for (int subdet : hit_match.MuonHitMatchV2::consideredSubdets()) {
+        const auto& matchHitVar = muonMatchHitVars.at(subdet);
+        const auto& matchLimits = muonMatchVarLimits.at(subdet);
+        const auto& hitLimits = muonHitVarLimits.at(subdet);
+        for (int station = deep_tau_2017::MuonHitMatchV2::first_station_id; station <= deep_tau_2017::MuonHitMatchV2::last_station_id; ++station) {
+          const unsigned n_matches = hit_match.nMatches(subdet, station);
+          const unsigned n_hits = hit_match.nHits(subdet, station);
+          get(matchHitVar.first + station - 1) = getValueLinear(n_matches, 0, matchLimits.at(station - 1), true);
+          get(matchHitVar.second + station - 1) = getValueLinear(n_hits, 0, hitLimits.at(station - 1), true);
+        }
+      }
+    }
+  }
+
+  template <typename CandidateCastType, typename TauCastType, typename HadronBlockType>
+  void createHadronsBlockInputs(unsigned idx,
+                                const TauCastType& tau,
+                                const size_t tau_index,
+                                const edm::RefToBase<reco::BaseTau> tau_ref,
+                                const reco::Vertex& pv,
+                                double rho,
+                                const edm::View<reco::Candidate>& pfCands,
+                                const deep_tau_2017::Cell& cell_map,
+                                const deep_tau_2017::TauFunc& tau_funcs,
+                                bool is_inner,
+                                HadronBlockType& hadronBlockInputs,
+								bool disable_hcalFraction_workaround) {
+    namespace dnn = deep_tau_2017::dnn_inputs_2017_v2::HadronBlockInputs;
+	namespace candFunc = deep_tau_2017::candFunc;
+
+	// HadronBlockType should be a std::vector<float> (for the SonicProducer),
+    // or a tensorflow::Tensor (for the direct inference producer)
+    const auto& get = [&](int var_index) -> float& {
+        if constexpr (std::is_same_v<HadronBlockType, std::vector<float>>) {
+            return hadronBlockInputs.at(var_index + idx * dnn::NumberOfInputs);
+        } else {
+            return ((tensorflow::Tensor)hadronBlockInputs).tensor<float, 4>()(idx, 0, 0, var_index);
+        }
+    };
+  
+    const bool valid_chH = cell_map.count(deep_tau_2017::CellObjectType::PfCand_chargedHadron);
+    const bool valid_nH = cell_map.count(deep_tau_2017::CellObjectType::PfCand_neutralHadron);
+  
+    if (!cell_map.empty()) {
+      get(dnn::rho) = getValueNorm(rho, 21.49f, 9.713f);
+      get(dnn::tau_pt) = getValueLinear(tau.polarP4().pt(), 20.f, 1000.f, true);
+      get(dnn::tau_eta) = getValueLinear(tau.polarP4().eta(), -2.3f, 2.3f, false);
+      get(dnn::tau_inside_ecal_crack) = getValue(isInEcalCrack(tau.polarP4().eta()));
+    }
+    if (valid_chH) {
+      size_t index_chH = cell_map.at(deep_tau_2017::CellObjectType::PfCand_chargedHadron);
+      const auto& chH_cand = dynamic_cast<const CandidateCastType&>(pfCands.at(index_chH));
+  
+      get(dnn::pfCand_chHad_valid) = valid_chH;
+      get(dnn::pfCand_chHad_rel_pt) = getValueNorm(pfCands.at(index_chH).polarP4().pt() / tau.polarP4().pt(),
+                                                   is_inner ? 0.2564f : 0.0194f,
+                                                   is_inner ? 0.8607f : 0.1865f);
+      get(dnn::pfCand_chHad_deta) = getValueLinear(pfCands.at(index_chH).polarP4().eta() - tau.polarP4().eta(),
+                                                   is_inner ? -0.1f : -0.5f,
+                                                   is_inner ? 0.1f : 0.5f,
+                                                   false);
+      get(dnn::pfCand_chHad_dphi) = getValueLinear(
+          deep_tau_2017::dPhi(tau.polarP4(), pfCands.at(index_chH).polarP4()), is_inner ? -0.1f : -0.5f, is_inner ? 0.1f : 0.5f, false);
+      get(dnn::pfCand_chHad_leadChargedHadrCand) =
+          getValue(&chH_cand == dynamic_cast<const CandidateCastType*>(tau.leadChargedHadrCand().get()));
+      get(dnn::pfCand_chHad_pvAssociationQuality) =
+          getValueLinear<int>(candFunc::getPvAssocationQuality(chH_cand), 0, 7, true);
+      get(dnn::pfCand_chHad_fromPV) = getValueLinear<int>(candFunc::getFromPV(chH_cand), 0, 3, true);
+      const float default_chH_pw_inner = 0.7614090f;
+      const float default_chH_pw_outer = 0.1974930f;
+      get(dnn::pfCand_chHad_puppiWeight) = is_inner ? getValue(candFunc::getPuppiWeight(chH_cand, default_chH_pw_inner))
+                                                    : getValue(candFunc::getPuppiWeight(chH_cand, default_chH_pw_outer));
+      get(dnn::pfCand_chHad_puppiWeightNoLep) =
+          is_inner ? getValue(candFunc::getPuppiWeightNoLep(chH_cand, default_chH_pw_inner))
+                   : getValue(candFunc::getPuppiWeightNoLep(chH_cand, default_chH_pw_outer));
+      get(dnn::pfCand_chHad_charge) = getValue(chH_cand.charge());
+      get(dnn::pfCand_chHad_lostInnerHits) = getValue<int>(candFunc::getLostInnerHits(chH_cand, 0));
+      get(dnn::pfCand_chHad_numberOfPixelHits) = getValueLinear(candFunc::getNumberOfPixelHits(chH_cand, 0), 0, 12, true);
+      get(dnn::pfCand_chHad_vertex_dx) =
+          getValueNorm(pfCands.at(index_chH).vertex().x() - pv.position().x(), 0.0005f, 1.735f);
+      get(dnn::pfCand_chHad_vertex_dy) =
+          getValueNorm(pfCands.at(index_chH).vertex().y() - pv.position().y(), -0.0008f, 1.752f);
+      get(dnn::pfCand_chHad_vertex_dz) =
+          getValueNorm(pfCands.at(index_chH).vertex().z() - pv.position().z(), -0.0201f, 8.333f);
+      get(dnn::pfCand_chHad_vertex_dx_tauFL) = getValueNorm(
+          pfCands.at(index_chH).vertex().x() - pv.position().x() - tau_funcs.getFlightLength(tau, tau_index).x(),
+          -0.0014f,
+          1.93f);
+      get(dnn::pfCand_chHad_vertex_dy_tauFL) = getValueNorm(
+          pfCands.at(index_chH).vertex().y() - pv.position().y() - tau_funcs.getFlightLength(tau, tau_index).y(),
+          0.0022f,
+          1.948f);
+      get(dnn::pfCand_chHad_vertex_dz_tauFL) = getValueNorm(
+          pfCands.at(index_chH).vertex().z() - pv.position().z() - tau_funcs.getFlightLength(tau, tau_index).z(),
+          -0.0138f,
+          8.622f);
+  
+      const bool hasTrackDetails = candFunc::getHasTrackDetails(chH_cand);
+      if (hasTrackDetails) {
+        get(dnn::pfCand_chHad_hasTrackDetails) = hasTrackDetails;
+        get(dnn::pfCand_chHad_dxy) = getValueNorm(candFunc::getTauDxy(chH_cand), -0.012f, 2.386f);
+        get(dnn::pfCand_chHad_dxy_sig) =
+            getValueNorm(std::abs(candFunc::getTauDxy(chH_cand)) / chH_cand.dxyError(), 6.417f, 36.28f);
+        get(dnn::pfCand_chHad_dz) = getValueNorm(candFunc::getTauDz(chH_cand), -0.0246f, 7.618f);
+        get(dnn::pfCand_chHad_dz_sig) =
+            getValueNorm(std::abs(candFunc::getTauDz(chH_cand)) / chH_cand.dzError(), 301.3f, 491.1f);
+        get(dnn::pfCand_chHad_track_chi2_ndof) =
+            candFunc::getPseudoTrack(chH_cand).ndof() > 0
+                ? getValueNorm(candFunc::getPseudoTrack(chH_cand).chi2() / candFunc::getPseudoTrack(chH_cand).ndof(),
+                               0.7876f,
+                               3.694f)
+                : 0;
+        get(dnn::pfCand_chHad_track_ndof) = candFunc::getPseudoTrack(chH_cand).ndof() > 0
+                                                ? getValueNorm(candFunc::getPseudoTrack(chH_cand).ndof(), 13.92f, 6.581f)
+                                                : 0;
+      }
+      float hcal_fraction = candFunc::getHCalFraction(chH_cand, disable_hcalFraction_workaround);
+      get(dnn::pfCand_chHad_hcalFraction) = getValue(hcal_fraction);
+      get(dnn::pfCand_chHad_rawCaloFraction) = getValueLinear(candFunc::getRawCaloFraction(chH_cand), 0.f, 2.6f, true);
+    }
+    if (valid_nH) {
+      size_t index_nH = cell_map.at(deep_tau_2017::CellObjectType::PfCand_neutralHadron);
+      const auto& nH_cand = dynamic_cast<const CandidateCastType&>(pfCands.at(index_nH));
+  
+      get(dnn::pfCand_nHad_valid) = valid_nH;
+      get(dnn::pfCand_nHad_rel_pt) = getValueNorm(pfCands.at(index_nH).polarP4().pt() / tau.polarP4().pt(),
+                                                  is_inner ? 0.3163f : 0.0502f,
+                                                  is_inner ? 0.2769f : 0.4266f);
+      get(dnn::pfCand_nHad_deta) = getValueLinear(pfCands.at(index_nH).polarP4().eta() - tau.polarP4().eta(),
+                                                  is_inner ? -0.1f : -0.5f,
+                                                  is_inner ? 0.1f : 0.5f,
+                                                  false);
+      get(dnn::pfCand_nHad_dphi) = getValueLinear(
+          deep_tau_2017::dPhi(tau.polarP4(), pfCands.at(index_nH).polarP4()), is_inner ? -0.1f : -0.5f, is_inner ? 0.1f : 0.5f, false);
+      get(dnn::pfCand_nHad_puppiWeight) = is_inner ? getValue(candFunc::getPuppiWeight(nH_cand, 0.9798355f))
+                                                   : getValue(candFunc::getPuppiWeight(nH_cand, 0.7813260f));
+      get(dnn::pfCand_nHad_puppiWeightNoLep) = is_inner ? getValue(candFunc::getPuppiWeightNoLep(nH_cand, 0.9046796f))
+                                                        : getValue(candFunc::getPuppiWeightNoLep(nH_cand, 0.6554860f));
+      float hcal_fraction = candFunc::getHCalFraction(nH_cand, disable_hcalFraction_workaround);
+      get(dnn::pfCand_nHad_hcalFraction) = getValue(hcal_fraction);
+    }
   }
 }
 
