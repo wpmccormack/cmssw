@@ -1244,7 +1244,7 @@ namespace deeptau_helper {
 		if constexpr (std::is_same_v<TauBlockType, std::vector<float>>) {
 			return tauBlockInputs.at(var_index);
 		} else {
-			return ((tensorflow::Tensor)tauBlockInputs).tensor<float, 2>()(0, var_index);
+			return ((tensorflow::Tensor)tauBlockInputs).matrix<float>()(0, var_index);
 		}
 	};
 

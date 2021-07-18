@@ -457,6 +457,7 @@ private:
     fillGrids(dynamic_cast<const TauCastType&>(tau), *muons, inner_grid, outer_grid);
     fillGrids(dynamic_cast<const TauCastType&>(tau), pfCands, inner_grid, outer_grid);
 
+    tauBlockTensor_->flat<float>().setZero();
     createTauBlockInputs<CandidateCastType>(
         dynamic_cast<const TauCastType&>(tau), tau_index, tau_ref, pv, rho, tau_funcs, *tauBlockTensor_, disable_dxy_pca_);
     using namespace dnn_inputs_2017_v2;
