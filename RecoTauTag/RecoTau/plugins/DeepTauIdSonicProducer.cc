@@ -455,19 +455,20 @@ void DeepTauIdSonicProducer::getPredictionsV2(TauCollection::const_reference& ta
                       0.05,
                       0.05,
                       disable_CellIndex_workaround_);
+  auto tau_casted = dynamic_cast<const TauCastType&>(tau);
   // fill in the inner and outer grids for electrons, muons, and pfCands
-  fillGrids(dynamic_cast<const TauCastType&>(tau), *electrons, inner_grid, outer_grid);
-  fillGrids(dynamic_cast<const TauCastType&>(tau), *muons, inner_grid, outer_grid);
-  fillGrids(dynamic_cast<const TauCastType&>(tau), pfCands, inner_grid, outer_grid);
+  fillGrids(tau_casted, *electrons, inner_grid, outer_grid);
+  fillGrids(tau_casted, *muons, inner_grid, outer_grid);
+  fillGrids(tau_casted, pfCands, inner_grid, outer_grid);
 
   std::vector<float>::iterator tauIter = tauBlockInputs.end();
   tauBlockInputs.insert(tauIter, dnn_inputs_2017_v2::TauBlockInputs::NumberOfInputs, 0.);
   createTauBlockInputs<CandidateCastType>(
-      dynamic_cast<const TauCastType&>(tau), tau_index, tau_ref, pv, rho, tau_funcs, tauIter, disable_dxy_pca_);
+      tau_casted, tau_index, tau_ref, pv, rho, tau_funcs, tauIter, disable_dxy_pca_);
   using namespace dnn_inputs_2017_v2;
 
   // egamma, muon, and hadron inner and outer inputs for the grids
-  createConvFeatures<CandidateCastType>(dynamic_cast<const TauCastType&>(tau),
+  createConvFeatures<CandidateCastType>(tau_casted,
                                         tau_index,
                                         tau_ref,
                                         pv,
@@ -482,7 +483,7 @@ void DeepTauIdSonicProducer::getPredictionsV2(TauCollection::const_reference& ta
                                         muonInnerBlockInputs,
                                         hadronInnerBlockInputs,
                                         innerGridposInputs);
-  createConvFeatures<CandidateCastType>(dynamic_cast<const TauCastType&>(tau),
+  createConvFeatures<CandidateCastType>(tau_casted,
                                         tau_index,
                                         tau_ref,
                                         pv,
