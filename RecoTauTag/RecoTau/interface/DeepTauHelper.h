@@ -1099,11 +1099,11 @@ namespace deeptau_helper {
     namespace dnn = deep_tau_2017::dnn_inputs_2017_v2::TauBlockInputs;
     namespace candFunc = deep_tau_2017::candFunc;
 
-    // TauBlockType should be a std::vector<float> (for the SonicProducer),
+    // TauBlockType should be a std::vector<float>::iterator (for the SonicProducer),
     // or a tensorflow::Tensor (for the direct inference producer)
     const auto& get = [&](int var_index) -> float& {
-      if constexpr (std::is_same_v<TauBlockType, std::vector<float>>) {
-        return tauBlockInputs.at(var_index);
+      if constexpr (std::is_same_v<TauBlockType, std::vector<float>::iterator>) {
+        return *(tauBlockInputs + var_index);
       } else {
         return ((tensorflow::Tensor)tauBlockInputs).matrix<float>()(0, var_index);
       }
@@ -1217,11 +1217,11 @@ namespace deeptau_helper {
     namespace dnn = deep_tau_2017::dnn_inputs_2017_v2::EgammaBlockInputs;
     namespace candFunc = deep_tau_2017::candFunc;
 
-    // EgammaBlockType should be a std::vector<float> (for the SonicProducer),
+    // EgammaBlockType should be a std::vector<float>::iterator (for the SonicProducer),
     // or a tensorflow::Tensor (for the direct inference producer)
     const auto& get = [&](int var_index) -> float& {
-      if constexpr (std::is_same_v<EgammaBlockType, std::vector<float>>) {
-        return egammaBlockInputs.at(var_index + idx * dnn::NumberOfInputs);
+      if constexpr (std::is_same_v<EgammaBlockType, std::vector<float>::iterator>) {
+        return *(egammaBlockInputs + var_index + idx * dnn::NumberOfInputs);
       } else {
         return ((tensorflow::Tensor)egammaBlockInputs).tensor<float, 4>()(idx, 0, 0, var_index);
       }
@@ -1462,11 +1462,11 @@ namespace deeptau_helper {
     namespace dnn = deep_tau_2017::dnn_inputs_2017_v2::MuonBlockInputs;
     namespace candFunc = deep_tau_2017::candFunc;
 
-    // MuonBlockType should be a std::vector<float> (for the SonicProducer),
+    // MuonBlockType should be a std::vector<float>::iterator (for the SonicProducer),
     // or a tensorflow::Tensor (for the direct inference producer)
     const auto& get = [&](int var_index) -> float& {
-      if constexpr (std::is_same_v<MuonBlockType, std::vector<float>>) {
-        return muonBlockInputs.at(var_index + idx * dnn::NumberOfInputs);
+      if constexpr (std::is_same_v<MuonBlockType, std::vector<float>::iterator>) {
+        return *(muonBlockInputs + var_index + idx * dnn::NumberOfInputs);
       } else {
         return ((tensorflow::Tensor)muonBlockInputs).tensor<float, 4>()(idx, 0, 0, var_index);
       }
@@ -1624,11 +1624,11 @@ namespace deeptau_helper {
     namespace dnn = deep_tau_2017::dnn_inputs_2017_v2::HadronBlockInputs;
     namespace candFunc = deep_tau_2017::candFunc;
 
-    // HadronBlockType should be a std::vector<float> (for the SonicProducer),
+    // HadronBlockType should be a std::vector<float>::iterator (for the SonicProducer),
     // or a tensorflow::Tensor (for the direct inference producer)
     const auto& get = [&](int var_index) -> float& {
-      if constexpr (std::is_same_v<HadronBlockType, std::vector<float>>) {
-        return hadronBlockInputs.at(var_index + idx * dnn::NumberOfInputs);
+      if constexpr (std::is_same_v<HadronBlockType, std::vector<float>::iterator>) {
+        return *(hadronBlockInputs + var_index + idx * dnn::NumberOfInputs);
       } else {
         return ((tensorflow::Tensor)hadronBlockInputs).tensor<float, 4>()(idx, 0, 0, var_index);
       }

@@ -153,8 +153,8 @@ private:
                         std::vector<float>& egammaOuterBlockInputs,
                         std::vector<float>& muonOuterBlockInputs,
                         std::vector<float>& hadronOuterBlockInputs,
-                        std::vector<int>& innerGridposInputs,
-                        std::vector<int>& outerGridposInputs);
+                        std::vector<int64_t>& innerGridposInputs,
+                        std::vector<int64_t>& outerGridposInputs);
 
   template <typename CandidateCastType, typename TauCastType>
   void createConvFeatures(const TauCastType& tau,
@@ -171,7 +171,7 @@ private:
                           std::vector<float>& egammaBlockInputs,
                           std::vector<float>& muonBlockInputs,
                           std::vector<float>& hadronBlockInputs,
-                          std::vector<int>& GridposInputs);
+                          std::vector<int64_t>& GridposInputs);
 };
 
 void DeepTauIdSonicProducer::acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) {
@@ -312,22 +312,6 @@ void DeepTauIdSonicProducer::acquire(edm::Event const& iEvent, edm::EventSetup c
   auto& vdata_outerGridposBlock = (*data_outerGridposBlock)[0];
 
   for (int tau_index : tau_indices_) {
-    std::vector<float> tauBlock;
-
-    // inner grid
-    std::vector<float> egammaInnerBlock;
-    std::vector<float> muonInnerBlock;
-    std::vector<float> hadronInnerBlock;
-
-    // outer grid
-    std::vector<float> egammaOuterBlock;
-    std::vector<float> muonOuterBlock;
-    std::vector<float> hadronOuterBlock;
-
-    // pos
-    std::vector<int> innerGridposBlock;
-    std::vector<int> outerGridposBlock;
-
     const edm::RefToBase<reco::BaseTau> tauRef = taus->refAt(tau_index);
     getPredictionsV2<pat::PackedCandidate, pat::Tau>(taus->at(tau_index),
                                                      tau_index,
@@ -338,33 +322,18 @@ void DeepTauIdSonicProducer::acquire(edm::Event const& iEvent, edm::EventSetup c
                                                      vertices->at(0),
                                                      *rho,
                                                      tauIDs,
-                                                     tauBlock,
-                                                     egammaInnerBlock,
-                                                     muonInnerBlock,
-                                                     hadronInnerBlock,
-                                                     egammaOuterBlock,
-                                                     muonOuterBlock,
-                                                     hadronOuterBlock,
-                                                     innerGridposBlock,
-                                                     outerGridposBlock);
-
-    vdata_tauBlock.insert(vdata_tauBlock.end(), tauBlock.begin(), tauBlock.end());
-
-    vdata_innerEgammaBlock.insert(vdata_innerEgammaBlock.end(), egammaInnerBlock.begin(), egammaInnerBlock.end());
-    vdata_innerMuonBlock.insert(vdata_innerMuonBlock.end(), muonInnerBlock.begin(), muonInnerBlock.end());
-    vdata_innerHadronBlock.insert(vdata_innerHadronBlock.end(), hadronInnerBlock.begin(), hadronInnerBlock.end());
-
-    vdata_outerEgammaBlock.insert(vdata_outerEgammaBlock.end(), egammaOuterBlock.begin(), egammaOuterBlock.end());
-    vdata_outerMuonBlock.insert(vdata_outerMuonBlock.end(), muonOuterBlock.begin(), muonOuterBlock.end());
-    vdata_outerHadronBlock.insert(vdata_outerHadronBlock.end(), hadronOuterBlock.begin(), hadronOuterBlock.end());
-
-    // map to save the inner/outer grid position and the associated tau indices in one event
-    // used for the core network
-    vdata_innerGridposBlock.insert(vdata_innerGridposBlock.end(), innerGridposBlock.begin(), innerGridposBlock.end());
-    vdata_outerGridposBlock.insert(vdata_outerGridposBlock.end(), outerGridposBlock.begin(), outerGridposBlock.end());
+                                                     vdata_tauBlock,
+                                                     vdata_innerEgammaBlock,
+                                                     vdata_innerMuonBlock,
+                                                     vdata_innerHadronBlock,
+                                                     vdata_outerEgammaBlock,
+                                                     vdata_outerMuonBlock,
+                                                     vdata_outerHadronBlock,
+                                                     vdata_innerGridposBlock,
+                                                     vdata_outerGridposBlock);
   }
 
-  // insert one collection of zeros to calculate the 'ZeroOutputTensor'
+  // insert one more set of zeros to calculate the 'ZeroOutputTensor'
   // i.e., the output from inner/outer network when the input is zero
   // this tensor will be used to pad the core network for the cells without any particle
   vdata_innerEgammaBlock.insert(
@@ -474,8 +443,8 @@ void DeepTauIdSonicProducer::getPredictionsV2(TauCollection::const_reference& ta
                                               std::vector<float>& egammaOuterBlockInputs,
                                               std::vector<float>& muonOuterBlockInputs,
                                               std::vector<float>& hadronOuterBlockInputs,
-                                              std::vector<int>& innerGridposInputs,
-                                              std::vector<int>& outerGridposInputs) {
+                                              std::vector<int64_t>& innerGridposInputs,
+                                              std::vector<int64_t>& outerGridposInputs) {
   CellGrid inner_grid(dnn_inputs_2017_v2::number_of_inner_cell,
                       dnn_inputs_2017_v2::number_of_inner_cell,
                       0.02,
@@ -491,9 +460,10 @@ void DeepTauIdSonicProducer::getPredictionsV2(TauCollection::const_reference& ta
   fillGrids(dynamic_cast<const TauCastType&>(tau), *muons, inner_grid, outer_grid);
   fillGrids(dynamic_cast<const TauCastType&>(tau), pfCands, inner_grid, outer_grid);
 
-  tauBlockInputs.resize(dnn_inputs_2017_v2::TauBlockInputs::NumberOfInputs, 0.);
+  std::vector<float>::iterator tauIter = tauBlockInputs.end();
+  tauBlockInputs.insert(tauIter, dnn_inputs_2017_v2::TauBlockInputs::NumberOfInputs, 0.);
   createTauBlockInputs<CandidateCastType>(
-      dynamic_cast<const TauCastType&>(tau), tau_index, tau_ref, pv, rho, tau_funcs, tauBlockInputs, disable_dxy_pca_);
+      dynamic_cast<const TauCastType&>(tau), tau_index, tau_ref, pv, rho, tau_funcs, tauIter, disable_dxy_pca_);
   using namespace dnn_inputs_2017_v2;
 
   // egamma, muon, and hadron inner and outer inputs for the grids
@@ -544,13 +514,16 @@ void DeepTauIdSonicProducer::createConvFeatures(const TauCastType& tau,
                                                 std::vector<float>& egammaBlockInputs,
                                                 std::vector<float>& muonBlockInputs,
                                                 std::vector<float>& hadronBlockInputs,
-                                                std::vector<int>& GridposInputs) {
+                                                std::vector<int64_t>& GridposInputs) {
   // fill in the block inputs with zeros
   int n_cells = grid.num_valid_cells();
 
-  egammaBlockInputs.resize(n_cells * dnn_inputs_2017_v2::EgammaBlockInputs::NumberOfInputs, 0.);
-  muonBlockInputs.resize(n_cells * dnn_inputs_2017_v2::MuonBlockInputs::NumberOfInputs, 0.);
-  hadronBlockInputs.resize(n_cells * dnn_inputs_2017_v2::HadronBlockInputs::NumberOfInputs, 0.);
+  std::vector<float>::iterator egammaIter = egammaBlockInputs.end();
+  egammaBlockInputs.insert(egammaIter, n_cells * dnn_inputs_2017_v2::EgammaBlockInputs::NumberOfInputs, 0.);
+  std::vector<float>::iterator muonIter = muonBlockInputs.end();
+  muonBlockInputs.insert(muonIter, n_cells * dnn_inputs_2017_v2::MuonBlockInputs::NumberOfInputs, 0.);
+  std::vector<float>::iterator hadronIter = hadronBlockInputs.end();
+  hadronBlockInputs.insert(hadronIter, n_cells * dnn_inputs_2017_v2::HadronBlockInputs::NumberOfInputs, 0.);
 
   unsigned idx = 0;
   for (int eta = -grid.maxEtaIndex(); eta <= grid.maxEtaIndex(); ++eta) {
@@ -569,9 +542,9 @@ void DeepTauIdSonicProducer::createConvFeatures(const TauCastType& tau,
         }
         const Cell& cell = cell_iter->second;
         createEgammaBlockInputs<CandidateCastType>(
-            idx, tau, tau_index, tau_ref, pv, rho, electrons, pfCands, cell, tau_funcs, is_inner, egammaBlockInputs);
+            idx, tau, tau_index, tau_ref, pv, rho, electrons, pfCands, cell, tau_funcs, is_inner, egammaIter);
         createMuonBlockInputs<CandidateCastType>(
-            idx, tau, tau_index, tau_ref, pv, rho, muons, pfCands, cell, tau_funcs, is_inner, muonBlockInputs);
+            idx, tau, tau_index, tau_ref, pv, rho, muons, pfCands, cell, tau_funcs, is_inner, muonIter);
         createHadronsBlockInputs<CandidateCastType>(idx,
                                                     tau,
                                                     tau_index,
@@ -582,7 +555,7 @@ void DeepTauIdSonicProducer::createConvFeatures(const TauCastType& tau,
                                                     cell,
                                                     tau_funcs,
                                                     is_inner,
-                                                    hadronBlockInputs,
+                                                    hadronIter,
                                                     disable_hcalFraction_workaround_);
 
         GridposInputs.push_back(tau_index);
