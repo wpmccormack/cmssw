@@ -988,7 +988,7 @@ namespace deeptau_helper {
 
   template <typename T>
   float getValueLinear(T value, float min_value, float max_value, bool positive) {
-	float transformed_value = (std::clamp(getValue(value), min_value, max_value) - min_value) / (max_value - min_value);
+    float transformed_value = (std::clamp(getValue(value), min_value, max_value) - min_value) / (max_value - min_value);
     if (!positive)
       transformed_value = transformed_value * 2 - 1;
     return transformed_value;
@@ -996,7 +996,7 @@ namespace deeptau_helper {
 
   template <typename T>
   float getValueNorm(T value, float mean, float sigma, float n_sigmas_max = 5) {
-	return std::clamp((getValue(value) - mean) / sigma, -n_sigmas_max, n_sigmas_max);
+    return std::clamp((getValue(value) - mean) / sigma, -n_sigmas_max, n_sigmas_max);
   }
 
   bool isAbove(double value, double min);
@@ -1106,7 +1106,6 @@ namespace deeptau_helper {
     };
 
     auto leadChargedHadrCand = dynamic_cast<const CandidateCastType*>(tau.leadChargedHadrCand().get());
-
 
     get(dnn::rho) = getValueNorm(rho, 21.49f, 9.713f);
     get(dnn::tau_pt) = getValueLinear(tau.polarP4().pt(), 20.f, 1000.f, true);

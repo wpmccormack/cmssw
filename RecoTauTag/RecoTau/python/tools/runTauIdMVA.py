@@ -737,7 +737,7 @@ class TauIDEmbedder(object):
                     is_online                = cms.bool(False)
                 ))
             else:
-                print("running deeptau with SONIC")
+                if self.debug: print("running deeptau with SONIC")
                 from RecoTauTag.RecoTau.deeptauIdSonicProducer_cff import sonic_deeptau
                 setattr(self.process,_deepTauName+self.postfix, sonic_deeptau.clone())
 
