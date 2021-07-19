@@ -30,14 +30,8 @@
 #include "DataFormats/Provenance/interface/ProductProvenance.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryID.h"
 #include "FWCore/Common/interface/Provenance.h"
-#include "DataFormats/TauReco/interface/PFTauTransverseImpactParameterAssociation.h"
-#include "FWCore/Utilities/interface/isFinite.h"
-#include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include <TF1.h>
 #include <map>
-
-#include <fstream>
-#include "tbb/concurrent_unordered_set.h"
 
 namespace deep_tau {
 
