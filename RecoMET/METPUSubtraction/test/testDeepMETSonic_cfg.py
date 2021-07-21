@@ -22,17 +22,17 @@ process.source = cms.Source("PoolSource",
                             )
 
 process.load("HeterogeneousCore.SonicTriton.TritonService_cff")
-process.TritonService.verbose = True
-process.TritonService.fallback.useDocker = True
-process.TritonService.fallback.verbose = True
+process.TritonService.verbose = False
+#process.TritonService.fallback.useDocker = True
+process.TritonService.fallback.verbose = False
 # uncomment this part if there is one server running at 0.0.0.0 with grpc port 8001
-process.TritonService.servers.append(
-    cms.PSet(
-        name = cms.untracked.string("default"),
-        address = cms.untracked.string("0.0.0.0"),
-        port = cms.untracked.uint32(8021),
-    )
-)
+#process.TritonService.servers.append(
+#    cms.PSet(
+#        name = cms.untracked.string("default"),
+#        address = cms.untracked.string("0.0.0.0"),
+#        port = cms.untracked.uint32(8021),
+#    )
+#)
 
 
 process.deepMETProducer = sonic_deepmet.clone(

@@ -69,7 +69,7 @@ process.source = cms.Source("PoolSource",
                             )
 
 process.load("HeterogeneousCore.SonicTriton.TritonService_cff")
-process.TritonService.verbose = True
+process.TritonService.verbose = False
 process.TritonService.servers.append(
     cms.PSet(
         name = cms.untracked.string("default"),

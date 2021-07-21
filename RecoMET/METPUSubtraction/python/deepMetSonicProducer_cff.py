@@ -6,6 +6,8 @@ sonic_deepmet = cms.EDProducer("DeepMETSonicProducer",
         modelName = cms.string("deepmet"),
         mode = cms.string("Async"),
         modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/deepmet/config.pbtxt"),
+        # version "1" is the resolutionTune
+        # version "2" is the responeTune
         modelVersion = cms.string("1"),
         verbose = cms.untracked.bool(False),
         allowedTries = cms.untracked.uint32(0),
