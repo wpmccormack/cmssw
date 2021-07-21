@@ -12,8 +12,8 @@ pfParticleNetTagInfos = pfDeepBoostedJetTagInfos.clone(
 
 pfParticleNetJetTags = boostedJetONNXJetTagsProducer.clone(
     src = 'pfParticleNetTagInfos',
-    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/preprocess_noragged.json',
-    #preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/preprocess.json',
+    #preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/preprocess_noragged.json',
+    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/preprocess.json',
     model_path = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/particle-net.onnx',
     flav_names = ["probTbcq",  "probTbqq",  "probTbc",   "probTbq",  "probTbel", "probTbmu", "probTbta",
                   "probWcq",   "probWqq",   "probZbb",   "probZcc",  "probZqq",  "probHbb", "probHcc",
@@ -46,10 +46,41 @@ pfMassDecorrelatedParticleNetJetTags = boostedJetONNXJetTagsProducer.clone(
                   "probQCDb", "probQCDc", "probQCDothers"],
 )
 
+pfMassDecorrelatedParticleNetSonicJetTags = particleNetSonicJetTagsProducer.clone(
+    src = 'pfParticleNetTagInfos',
+    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/MD-2prong/V01/preprocess_noragged.json',
+    Client = cms.PSet(
+        timeout = cms.untracked.uint32(300),
+        modelName = cms.string("particlenet_AK8_MD-2prong"),
+        mode = cms.string("Async"),
+        modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/particlenet_AK8_MD-2prong/config.pbtxt"),
+        modelVersion = cms.string(""),
+        verbose = cms.untracked.bool(False),
+        allowedTries = cms.untracked.uint32(0),
+    ),
+    flav_names = ["probXbb", "probXcc", "probXqq", "probQCDbb", "probQCDcc",
+                  "probQCDb", "probQCDc", "probQCDothers"],
+)
+
 pfParticleNetMassRegressionJetTags = boostedJetONNXJetTagsProducer.clone(
     src = 'pfParticleNetTagInfos',
     preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/MassRegression/V01/preprocess.json',
     model_path = 'RecoBTag/Combined/data/ParticleNetAK8/MassRegression/V01/particle-net.onnx',
+    flav_names = ["mass"],
+)
+
+pfParticleNetMassRegressionSonicJetTags = particleNetSonicJetTagsProducer.clone(
+    src = 'pfParticleNetTagInfos',
+    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/MassRegression/V01/preprocess_noragged.json',
+    Client = cms.PSet(
+        timeout = cms.untracked.uint32(300),
+        modelName = cms.string("particlenet_AK8_MassRegression"),
+        mode = cms.string("Async"),
+        modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/particlenet_AK8_MassRegression/config.pbtxt"),
+        modelVersion = cms.string(""),
+        verbose = cms.untracked.bool(False),
+        allowedTries = cms.untracked.uint32(0),
+    ),
     flav_names = ["mass"],
 )
 
@@ -74,11 +105,17 @@ _pfParticleNetJetTagsMetaDiscrs = ['pfParticleNetDiscriminatorsJetTags:' + disc.
 # mass-decorrelated: probs
 _pfMassDecorrelatedParticleNetJetTagsProbs = ['pfMassDecorrelatedParticleNetJetTags:' + flav_name
                               for flav_name in pfMassDecorrelatedParticleNetJetTags.flav_names]
+
+_pfMassDecorrelatedParticleNetSonicJetTagsProbs = ['pfMassDecorrelatedParticleNetSonicJetTags:' + flav_name
+                              for flav_name in pfMassDecorrelatedParticleNetJetTags.flav_names]
 # mass-decorrelated: meta-taggers
 _pfMassDecorrelatedParticleNetJetTagsMetaDiscrs = ['pfMassDecorrelatedParticleNetDiscriminatorsJetTags:' + disc.name.value()
                                    for disc in pfMassDecorrelatedParticleNetDiscriminatorsJetTags.discriminators]
 
 _pfParticleNetMassRegressionOutputs = ['pfParticleNetMassRegressionJetTags:' + flav_name
+                                       for flav_name in pfParticleNetMassRegressionJetTags.flav_names]
+
+_pfParticleNetMassRegressionSonicOutputs = ['pfParticleNetMassRegressionSonicJetTags:' + flav_name
                                        for flav_name in pfParticleNetMassRegressionJetTags.flav_names]
 
 _pfParticleNetJetTagsAll = _pfParticleNetJetTagsProbs + _pfParticleNetJetTagsMetaDiscrs + \

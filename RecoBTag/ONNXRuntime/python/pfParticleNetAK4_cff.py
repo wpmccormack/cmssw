@@ -2,6 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 from RecoBTag.FeatureTools.pfDeepBoostedJetTagInfos_cfi import pfDeepBoostedJetTagInfos
 from RecoBTag.ONNXRuntime.boostedJetONNXJetTagsProducer_cfi import boostedJetONNXJetTagsProducer
+from RecoBTag.ONNXRuntime.particleNetSonicJetTagsProducer_cfi import particleNetSonicJetTagsProducer
 from RecoBTag.ONNXRuntime.pfParticleNetAK4DiscriminatorsJetTags_cfi import pfParticleNetAK4DiscriminatorsJetTags
 
 pfParticleNetAK4TagInfos = pfDeepBoostedJetTagInfos.clone(
@@ -18,6 +19,21 @@ pfParticleNetAK4JetTags = boostedJetONNXJetTagsProducer.clone(
     flav_names = ["probb",  "probbb",  "probc",   "probcc",  "probuds", "probg", "probundef", "probpu"],
 )
 
+pfParticleNetAK4SonicJetTags = particleNetSonicJetTagsProducer.clone(
+    src = 'pfParticleNetAK4TagInfos',
+    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK4/CHS/V00/preprocess_noragged.json',
+    Client = cms.PSet(
+        timeout = cms.untracked.uint32(300),
+        modelName = cms.string("particlenet_AK4"),
+        mode = cms.string("Async"),
+        modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/particlenet_AK4/config.pbtxt"),
+        modelVersion = cms.string(""),
+        verbose = cms.untracked.bool(False),
+        allowedTries = cms.untracked.uint32(0),
+    ),
+    flav_names = ["probb",  "probbb",  "probc",   "probcc",  "probuds", "probg", "probundef", "probpu"],
+)
+
 from CommonTools.PileupAlgos.Puppi_cff import puppi
 from PhysicsTools.PatAlgos.slimming.primaryVertexAssociation_cfi import primaryVertexAssociation
 
@@ -29,11 +45,14 @@ pfParticleNetAK4Task = cms.Task(puppi, primaryVertexAssociation, pfParticleNetAK
 # probs
 _pfParticleNetAK4JetTagsProbs = ['pfParticleNetAK4JetTags:' + flav_name
                                  for flav_name in pfParticleNetAK4JetTags.flav_names]
+
+_pfParticleNetAK4SonicJetTagsProbs = ['pfParticleNetAK4SonicJetTags:' + flav_name
+                                 for flav_name in pfParticleNetAK4JetTags.flav_names]
 # meta-taggers
 _pfParticleNetAK4JetTagsMetaDiscrs = ['pfParticleNetAK4DiscriminatorsJetTags:' + disc.name.value()
                                       for disc in pfParticleNetAK4DiscriminatorsJetTags.discriminators]
 
-_pfParticleNetAK4JetTagsAll = _pfParticleNetAK4JetTagsProbs + _pfParticleNetAK4JetTagsMetaDiscrs
+_pfParticleNetAK4JetTagsAll = _pfParticleNetAK4JetTagsProbs + _pfParticleNetAK4SonicJetTagsProbs + _pfParticleNetAK4JetTagsMetaDiscrs
 
 
 # === Negative tags ===
