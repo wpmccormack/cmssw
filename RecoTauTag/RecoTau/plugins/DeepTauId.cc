@@ -407,7 +407,6 @@ private:
           if (!(pred >= 0 && pred <= 1))
             throw cms::Exception("DeepTauId")
                 << "invalid prediction = " << pred << " for tau_index = " << tau_index << ", pred_index = " << k;
-          std::cout << "tau_index " << tau_index << " k " << k << " pred " << pred << std::endl;
           predictions.matrix<float>()(tau_index, k) = pred;
         }
       }
