@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-sonic_deepmet = cms.EDProducer("DeepMETSonicProducer",
+deepMETSonicProducer = cms.EDProducer("DeepMETSonicProducer",
     Client = cms.PSet(
         timeout = cms.untracked.uint32(300),
         modelName = cms.string("deepmet"),
