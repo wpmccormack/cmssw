@@ -251,11 +251,11 @@ for disc in _pfMassDecorrelatedDeepBoostedJetTagsMetaDiscrs:
 
 # -----------------------------------
 # setup ParticleNet AK8
-from RecoBTag.ONNXRuntime.pfParticleNet_cff import _pfParticleNetJetTagsProbs, _pfParticleNetSonicJetTagsProbs, _pfParticleNetJetTagsMetaDiscrs, \
-    _pfMassDecorrelatedParticleNetJetTagsProbs, _pfMassDecorrelatedParticleNetSonicJetTagsProbs, _pfMassDecorrelatedParticleNetJetTagsMetaDiscrs, \
-    _pfParticleNetMassRegressionOutputs, _pfParticleNetMassRegressionSonicOutputs
+from RecoBTag.ONNXRuntime.pfParticleNet_cff import _pfParticleNetJetTagsProbs, _pfParticleNetJetTagsMetaDiscrs, \
+    _pfMassDecorrelatedParticleNetJetTagsProbs, _pfMassDecorrelatedParticleNetJetTagsMetaDiscrs, \
+    _pfParticleNetMassRegressionOutputs
 # update supportedBtagDiscr
-for disc in _pfParticleNetJetTagsProbs + _pfParticleNetSonicJetTagsProbs + _pfMassDecorrelatedParticleNetJetTagsProbs + _pfParticleNetMassRegressionOutputs + _pfMassDecorrelatedParticleNetSonicJetTagsProbs + _pfParticleNetMassRegressionSonicOutputs:
+for disc in _pfParticleNetJetTagsProbs + _pfMassDecorrelatedParticleNetJetTagsProbs + _pfParticleNetMassRegressionOutputs:
     supportedBtagDiscr[disc] = [["pfParticleNetTagInfos"]]
 # update supportedMetaDiscr
 for disc in _pfParticleNetJetTagsMetaDiscrs:
@@ -266,9 +266,9 @@ for disc in _pfMassDecorrelatedParticleNetJetTagsMetaDiscrs:
 
 # -----------------------------------
 # setup ParticleNet AK4
-from RecoBTag.ONNXRuntime.pfParticleNetAK4_cff import _pfParticleNetAK4JetTagsProbs, _pfParticleNetAK4SonicJetTagsProbs, _pfParticleNetAK4JetTagsMetaDiscrs
+from RecoBTag.ONNXRuntime.pfParticleNetAK4_cff import _pfParticleNetAK4JetTagsProbs, _pfParticleNetAK4JetTagsMetaDiscrs
 # update supportedBtagDiscr
-for disc in _pfParticleNetAK4JetTagsProbs + _pfParticleNetAK4SonicJetTagsProbs + _pfParticleNetAK4JetTagsMetaDiscrs:
+for disc in _pfParticleNetAK4JetTagsProbs + _pfParticleNetAK4JetTagsMetaDiscrs:
     supportedBtagDiscr[disc] = [["pfParticleNetAK4TagInfos"]]
 # update supportedMetaDiscr
 for disc in _pfParticleNetAK4JetTagsMetaDiscrs:
