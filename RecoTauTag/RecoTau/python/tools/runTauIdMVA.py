@@ -734,7 +734,9 @@ class TauIDEmbedder(object):
             # if/when implementing for other versions, reduce duplication of setattr(...) lines above
             from RecoTauTag.RecoTau.deepTauSonicProducer_cff import deepTauSonicProducer as _deepTauSonicProducer
             from Configuration.ProcessModifiers.deepTauSonicTriton_cff import deepTauSonicTriton
-            deepTauSonicTriton.toReplaceWith(_deepTauProducer, _deepTauSonicProducer.clone())
+            deepTauSonicTriton.toReplaceWith(_deepTauProducer, _deepTauSonicProducer.clone(
+                taus = _deepTauProducer.taus,
+            ))
 
             self.processDeepProducer(_deepTauName, tauIDSources, workingPoints_)
 
