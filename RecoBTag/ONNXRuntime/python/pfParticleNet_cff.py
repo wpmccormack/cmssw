@@ -25,12 +25,14 @@ particleNetSonicTriton.toReplaceWith(pfParticleNetJetTags, _particleNetSonicJetT
     preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/preprocess_noragged.json',
     Client = cms.PSet(
         timeout = cms.untracked.uint32(300),
-        modelName = cms.string("particlenet"),
         mode = cms.string("Async"),
+        modelName = cms.string("particlenet"),
         modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/particlenet/config.pbtxt"),
         modelVersion = cms.string(""),
         verbose = cms.untracked.bool(False),
         allowedTries = cms.untracked.uint32(0),
+        useSharedMemory = cms.untracked.bool(True),
+        compression = cms.untracked.string(""),
     ),
     flav_names = pfParticleNetJetTags.flav_names,
 ))
