@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-sonic_deeptau = cms.EDProducer("DeepTauIdSonicProducer",
+deepTauSonicProducer = cms.EDProducer("DeepTauIdSonicProducer",
     Client = cms.PSet(
         timeout = cms.untracked.uint32(300),
         modelName = cms.string("deeptau_ensemble"),
