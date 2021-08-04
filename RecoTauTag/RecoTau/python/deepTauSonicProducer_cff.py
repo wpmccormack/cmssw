@@ -21,7 +21,7 @@ deepTauSonicProducer = cms.EDProducer("DeepTauIdSonicProducer",
     disable_dxy_pca = cms.bool(True)
 )
 
-deepTauSonicProducer_NonSplit = deepTauSonicProducer.clone()
-deepTauSonicProducer_NonSplit.Client.modelName = cms.string("deeptau_nosplit")
-deepTauSonicProducer_NonSplit.Client.modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/deeptau_nosplit/config.pbtxt")
-deepTauSonicProducer_NonSplit.doSplitVersion = cms.bool(False)
+deepTauSonicProducer_NoSplit = deepTauSonicProducer.clone()
+deepTauSonicProducer_NoSplit.Client.modelName = cms.string("deeptau_nosplit")
+deepTauSonicProducer_NoSplit.Client.modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/deeptau_nosplit/config.pbtxt")
+deepTauSonicProducer_NoSplit.doSplitVersion = cms.bool(False)
