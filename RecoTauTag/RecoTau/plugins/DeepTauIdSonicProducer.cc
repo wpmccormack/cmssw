@@ -33,13 +33,11 @@ public:
         pfTauTransverseImpactParameters_token_(
             consumes<edm::AssociationVector<reco::PFTauRefProd, std::vector<reco::PFTauTransverseImpactParameterRef>>>(
                 cfg.getParameter<edm::InputTag>("pfTauTransverseImpactParameters"))),
-        version_(cfg.getParameter<unsigned>("version")),
         debug_level(cfg.getParameter<int>("debug_level")),
         disable_dxy_pca_(cfg.getParameter<bool>("disable_dxy_pca")),
         disable_hcalFraction_workaround_(cfg.getParameter<bool>("disable_hcalFraction_workaround")),
         disable_CellIndex_workaround_(cfg.getParameter<bool>("disable_CellIndex_workaround")),
         doSplitVersion_(cfg.getParameter<bool>("doSplitVersion")),
-        json_file_(nullptr),
         outputdiscs_(GetOutputs()) {
     for (const auto& output_desc : outputdiscs_) {
       produces<TauDiscriminator>(output_desc.first);
@@ -120,14 +118,11 @@ private:
   edm::EDGetTokenT<edm::AssociationVector<reco::PFTauRefProd, std::vector<reco::PFTauTransverseImpactParameterRef>>>
       pfTauTransverseImpactParameters_token_;
   std::string input_layer_, output_layer_;
-  const unsigned version_;
   const int debug_level;
   const bool disable_dxy_pca_;
   const bool disable_hcalFraction_workaround_;
   const bool disable_CellIndex_workaround_;
   const bool doSplitVersion_;
-  std::ofstream* json_file_;
-  bool is_first_block_;
 
   OutputCollection outputdiscs_;
   std::map<std::string, WPList> workingPoints_;
@@ -639,8 +634,6 @@ void DeepTauIdSonicProducer::fillDescriptions(edm::ConfigurationDescriptions& de
   desc.add<edm::InputTag>("pfcands", edm::InputTag("packedPFCandidates"));
   desc.add<edm::InputTag>("vertices", edm::InputTag("offlineSlimmedPrimaryVertices"));
   desc.add<edm::InputTag>("rho", edm::InputTag("fixedGridRhoAll"));
-  desc.add<bool>("mem_mapped", false);
-  desc.add<unsigned>("version", 2);
   desc.add<int>("debug_level", 0);
   desc.add<bool>("disable_dxy_pca", false);
   desc.add<bool>("disable_hcalFraction_workaround", false);
