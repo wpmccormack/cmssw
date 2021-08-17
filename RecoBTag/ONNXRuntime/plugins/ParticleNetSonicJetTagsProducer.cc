@@ -129,9 +129,32 @@ void ParticleNetSonicJetTagsProducer::acquire(edm::Event const &iEvent, edm::Eve
   iEvent.getByToken(src_, tag_infos);
   client_->setBatchSize(tag_infos->size());
   if (!tag_infos->empty()) {
+
+    unsigned int maxParticles = 0;
+    unsigned int maxVertices = 0;
+    for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
+      if( ((*tag_infos)[jet_n]).features().get("pfcand_etarel").size() > maxParticles) maxParticles = ((*tag_infos)[jet_n]).features().get("pfcand_etarel").size();
+      if( ((*tag_infos)[jet_n]).features().get("sv_etarel").size() > maxVertices) maxVertices = ((*tag_infos)[jet_n]).features().get("sv_etarel").size();
+    }
+    unsigned int minPartFromJSON = prep_info_map_.at(input_names_[0]).min_length;
+    unsigned int maxPartFromJSON = prep_info_map_.at(input_names_[0]).max_length;
+    unsigned int minVertFromJSON = prep_info_map_.at(input_names_[3]).min_length;
+    unsigned int maxVertFromJSON = prep_info_map_.at(input_names_[3]).max_length;
+    maxParticles = std::clamp(maxParticles, minPartFromJSON, maxPartFromJSON);
+    maxVertices = std::clamp(maxVertices, minVertFromJSON, maxVertFromJSON);
+
     for (unsigned igroup = 0; igroup < input_names_.size(); ++igroup) {
       const auto &group_name = input_names_[igroup];
       auto &input = iInput.at(group_name);
+      unsigned target;
+      if(igroup < 3){
+        input.setShape(1, maxParticles);
+	target = maxParticles;
+      }
+      else{
+        input.setShape(1, maxVertices);
+	target = maxVertices;
+      }
       auto tdata = input.allocate<float>(true);
       for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
         const auto &taginfo = (*tag_infos)[jet_n];
@@ -143,11 +166,10 @@ void ParticleNetSonicJetTagsProducer::acquire(edm::Event const &iEvent, edm::Eve
           const auto &varname = prep_params.var_names[i];
           const auto &raw_value = taginfo.features().get(varname);
           const auto &info = prep_params.info(varname);
-          int insize = center_norm_pad(raw_value,
+          int insize = center_norm_pad_halfRagged(raw_value,
                                        info.center,
                                        info.norm_factor,
-                                       prep_params.min_length,
-                                       prep_params.max_length,
+                                       target,
                                        vdata,
                                        curr_pos,
                                        info.pad,

@@ -20,3 +20,8 @@ deepTauSonicProducer = cms.EDProducer("DeepTauIdSonicProducer",
     rho = cms.InputTag('fixedGridRhoAll'),
     disable_dxy_pca = cms.bool(True)
 )
+
+deepTauSonicProducer_NoSplit = deepTauSonicProducer.clone()
+deepTauSonicProducer_NoSplit.Client.modelName = cms.string("deeptau_nosplit")
+deepTauSonicProducer_NoSplit.Client.modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/deeptau_nosplit/config.pbtxt")
+deepTauSonicProducer_NoSplit.doSplitVersion = cms.bool(False)

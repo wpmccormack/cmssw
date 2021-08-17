@@ -22,7 +22,7 @@ pfParticleNetJetTags = boostedJetONNXJetTagsProducer.clone(
 
 particleNetSonicTriton.toReplaceWith(pfParticleNetJetTags, _particleNetSonicJetTagsProducer.clone(
     src = 'pfParticleNetTagInfos',
-    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/preprocess_noragged.json',
+    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/preprocess.json',
     Client = cms.PSet(
         timeout = cms.untracked.uint32(300),
         mode = cms.string("Async"),
@@ -47,7 +47,7 @@ pfMassDecorrelatedParticleNetJetTags = boostedJetONNXJetTagsProducer.clone(
 
 particleNetSonicTriton.toReplaceWith(pfMassDecorrelatedParticleNetJetTags, _particleNetSonicJetTagsProducer.clone(
     src = 'pfParticleNetTagInfos',
-    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/MD-2prong/V01/preprocess_noragged.json',
+    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/MD-2prong/V01/preprocess.json',
     Client = cms.PSet(
         timeout = cms.untracked.uint32(300),
         modelName = cms.string("particlenet_AK8_MD-2prong"),
@@ -69,7 +69,7 @@ pfParticleNetMassRegressionJetTags = boostedJetONNXJetTagsProducer.clone(
 
 particleNetSonicTriton.toReplaceWith(pfParticleNetMassRegressionJetTags, _particleNetSonicJetTagsProducer.clone(
     src = 'pfParticleNetTagInfos',
-    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/MassRegression/V01/preprocess_noragged.json',
+    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/MassRegression/V01/preprocess.json',
     Client = cms.PSet(
         timeout = cms.untracked.uint32(300),
         modelName = cms.string("particlenet_AK8_MassRegression"),
