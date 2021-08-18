@@ -48,6 +48,7 @@ private:
   std::vector<unsigned> input_sizes_;               // total length of each input vector
   std::unordered_map<std::string, PreprocessParams> prep_info_map_;  // preprocessing info for each input group
   bool debug_ = false;
+  bool skippedInference_ = false;
 };
 
 ParticleNetSonicJetTagsProducer::ParticleNetSonicJetTagsProducer(const edm::ParameterSet &iConfig)
@@ -128,6 +129,7 @@ void ParticleNetSonicJetTagsProducer::acquire(edm::Event const &iEvent, edm::Eve
   edm::Handle<TagInfoCollection> tag_infos;
   iEvent.getByToken(src_, tag_infos);
   client_->setBatchSize(tag_infos->size());
+  skippedInference_ = false;
   if (!tag_infos->empty()) {
 
     unsigned int maxParticles = 0;
@@ -135,6 +137,11 @@ void ParticleNetSonicJetTagsProducer::acquire(edm::Event const &iEvent, edm::Eve
     for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
       if( ((*tag_infos)[jet_n]).features().get("pfcand_etarel").size() > maxParticles) maxParticles = ((*tag_infos)[jet_n]).features().get("pfcand_etarel").size();
       if( ((*tag_infos)[jet_n]).features().get("sv_etarel").size() > maxVertices) maxVertices = ((*tag_infos)[jet_n]).features().get("sv_etarel").size();
+    }
+    if(maxParticles == 0 && maxVertices == 0){
+      client_->setBatchSize(0);
+      skippedInference_ = true;
+      return;
     }
     unsigned int minPartFromJSON = prep_info_map_.at(input_names_[0]).min_length;
     unsigned int maxPartFromJSON = prep_info_map_.at(input_names_[0]).max_length;
@@ -217,18 +224,27 @@ void ParticleNetSonicJetTagsProducer::produce(edm::Event &iEvent,
   }
 
   if (!tag_infos->empty()) {
-    const auto &output1 = iOutput.begin()->second;
-    const auto &outputs_from_server = output1.fromServer<float>();
-
-    for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
-      const auto &taginfo = (*tag_infos)[jet_n];
-      const auto &jet_ref = tag_infos->at(jet_n).jet();
-
-      if (!taginfo.features().empty()) {
-        for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
-          (*(output_tags[flav_n]))[jet_ref] = outputs_from_server[jet_n][flav_n];
-        }
-      } else {
+    if(!skippedInference_){
+      const auto &output1 = iOutput.begin()->second;
+      const auto &outputs_from_server = output1.fromServer<float>();
+      
+      for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
+	const auto &taginfo = (*tag_infos)[jet_n];
+	const auto &jet_ref = tag_infos->at(jet_n).jet();
+	
+	if (!taginfo.features().empty()) {
+	  for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
+	    (*(output_tags[flav_n]))[jet_ref] = outputs_from_server[jet_n][flav_n];
+	  }
+	} else {
+	  for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
+	    (*(output_tags[flav_n]))[jet_ref] = 0.;
+	  }
+	}
+      }
+    } else{
+      for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
+        const auto &jet_ref = tag_infos->at(jet_n).jet();
         for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
           (*(output_tags[flav_n]))[jet_ref] = 0.;
         }
