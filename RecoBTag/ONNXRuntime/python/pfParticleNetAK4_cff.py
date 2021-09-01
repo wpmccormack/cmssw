@@ -22,7 +22,7 @@ pfParticleNetAK4JetTags = boostedJetONNXJetTagsProducer.clone(
 
 particleNetSonicTriton.toReplaceWith(pfParticleNetAK4JetTags, _particleNetSonicJetTagsProducer.clone(
     src = 'pfParticleNetAK4TagInfos',
-    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK4/CHS/V00/preprocess_noragged.json',
+    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK4/CHS/V00/preprocess.json',
     Client = cms.PSet(
         timeout = cms.untracked.uint32(300),
         mode = cms.string("Async"),
