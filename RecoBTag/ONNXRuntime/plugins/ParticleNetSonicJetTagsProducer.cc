@@ -49,6 +49,7 @@ private:
   std::unordered_map<std::string, PreprocessParams> prep_info_map_;  // preprocessing info for each input group
   bool debug_ = false;
   bool skippedInference_ = false;
+  unsigned numParticleGroups_ = 3;
 };
 
 ParticleNetSonicJetTagsProducer::ParticleNetSonicJetTagsProducer(const edm::ParameterSet &iConfig)
@@ -131,14 +132,15 @@ void ParticleNetSonicJetTagsProducer::acquire(edm::Event const &iEvent, edm::Eve
   client_->setBatchSize(tag_infos->size());
   skippedInference_ = false;
   if (!tag_infos->empty()) {
-
     unsigned int maxParticles = 0;
     unsigned int maxVertices = 0;
     for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
-      if( ((*tag_infos)[jet_n]).features().get("pfcand_etarel").size() > maxParticles) maxParticles = ((*tag_infos)[jet_n]).features().get("pfcand_etarel").size();
-      if( ((*tag_infos)[jet_n]).features().get("sv_etarel").size() > maxVertices) maxVertices = ((*tag_infos)[jet_n]).features().get("sv_etarel").size();
+      maxParticles = std::max(maxParticles,
+                              static_cast<unsigned int>(((*tag_infos)[jet_n]).features().get("pfcand_etarel").size()));
+      maxVertices =
+          std::max(maxVertices, static_cast<unsigned int>(((*tag_infos)[jet_n]).features().get("sv_etarel").size()));
     }
-    if(maxParticles == 0 && maxVertices == 0){
+    if (maxParticles == 0 && maxVertices == 0) {
       client_->setBatchSize(0);
       skippedInference_ = true;
       return;
@@ -154,13 +156,12 @@ void ParticleNetSonicJetTagsProducer::acquire(edm::Event const &iEvent, edm::Eve
       const auto &group_name = input_names_[igroup];
       auto &input = iInput.at(group_name);
       unsigned target;
-      if(igroup < 3){
+      if (igroup < numParticleGroups_) {
         input.setShape(1, maxParticles);
-	target = maxParticles;
-      }
-      else{
+        target = maxParticles;
+      } else {
         input.setShape(1, maxVertices);
-	target = maxVertices;
+        target = maxVertices;
       }
       auto tdata = input.allocate<float>(true);
       for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
@@ -174,15 +175,15 @@ void ParticleNetSonicJetTagsProducer::acquire(edm::Event const &iEvent, edm::Eve
           const auto &raw_value = taginfo.features().get(varname);
           const auto &info = prep_params.info(varname);
           int insize = center_norm_pad_halfRagged(raw_value,
-                                       info.center,
-                                       info.norm_factor,
-                                       target,
-                                       vdata,
-                                       curr_pos,
-                                       info.pad,
-                                       info.replace_inf_value,
-                                       info.lower_bound,
-                                       info.upper_bound);
+                                                  info.center,
+                                                  info.norm_factor,
+                                                  target,
+                                                  vdata,
+                                                  curr_pos,
+                                                  info.pad,
+                                                  info.replace_inf_value,
+                                                  info.lower_bound,
+                                                  info.upper_bound);
           curr_pos += insize;
           if (i == 0 && (!input_shapes_.empty())) {
             input_shapes_[igroup][2] = insize;
@@ -224,25 +225,25 @@ void ParticleNetSonicJetTagsProducer::produce(edm::Event &iEvent,
   }
 
   if (!tag_infos->empty()) {
-    if(!skippedInference_){
+    if (!skippedInference_) {
       const auto &output1 = iOutput.begin()->second;
       const auto &outputs_from_server = output1.fromServer<float>();
-      
+
       for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
-	const auto &taginfo = (*tag_infos)[jet_n];
-	const auto &jet_ref = tag_infos->at(jet_n).jet();
-	
-	if (!taginfo.features().empty()) {
-	  for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
-	    (*(output_tags[flav_n]))[jet_ref] = outputs_from_server[jet_n][flav_n];
-	  }
-	} else {
-	  for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
-	    (*(output_tags[flav_n]))[jet_ref] = 0.;
-	  }
-	}
+        const auto &taginfo = (*tag_infos)[jet_n];
+        const auto &jet_ref = tag_infos->at(jet_n).jet();
+
+        if (!taginfo.features().empty()) {
+          for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
+            (*(output_tags[flav_n]))[jet_ref] = outputs_from_server[jet_n][flav_n];
+          }
+        } else {
+          for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {
+            (*(output_tags[flav_n]))[jet_ref] = 0.;
+          }
+        }
       }
-    } else{
+    } else {
       for (unsigned jet_n = 0; jet_n < tag_infos->size(); ++jet_n) {
         const auto &jet_ref = tag_infos->at(jet_n).jet();
         for (std::size_t flav_n = 0; flav_n < flav_names_.size(); flav_n++) {

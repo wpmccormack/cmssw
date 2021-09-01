@@ -126,15 +126,15 @@ namespace btagbtvdeep {
                       float max = -1);
 
   int center_norm_pad_halfRagged(const std::vector<float> &input,
-                      float center,
-                      float scale,
-                      unsigned target_length,
-                      std::vector<float> &datavec,
-                      int startval,
-                      float pad_value = 0,
-                      float replace_inf_value = 0,
-                      float min = 0,
-                      float max = -1);
+                                 float center,
+                                 float scale,
+                                 unsigned target_length,
+                                 std::vector<float> &datavec,
+                                 int startval,
+                                 float pad_value = 0,
+                                 float replace_inf_value = 0,
+                                 float min = 0,
+                                 float max = -1);
 
   void ParticleNetConstructor(const edm::ParameterSet &Config_,
                               bool doExtra,
