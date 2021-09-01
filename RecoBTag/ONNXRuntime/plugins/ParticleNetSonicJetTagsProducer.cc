@@ -49,7 +49,7 @@ private:
   std::unordered_map<std::string, PreprocessParams> prep_info_map_;  // preprocessing info for each input group
   bool debug_ = false;
   bool skippedInference_ = false;
-  unsigned numParticleGroups_ = 3;
+  const unsigned numParticleGroups_ = 3;
 };
 
 ParticleNetSonicJetTagsProducer::ParticleNetSonicJetTagsProducer(const edm::ParameterSet &iConfig)
