@@ -162,11 +162,17 @@ namespace btagbtvdeep {
 
     assert(min <= pad_value && pad_value <= max);
 
-    for (unsigned i = 0; i < input.size(); ++i) {
-      datavec.push_back(std::clamp((catch_infs(input[i], replace_inf_value) - center) * norm_factor, min, max));
+    if (input.size() <= target_length) {
+      for (unsigned i = 0; i < input.size(); ++i) {
+        datavec.push_back(std::clamp((catch_infs(input[i], replace_inf_value) - center) * norm_factor, min, max));
+      }
+      if (input.size() < target_length)
+        datavec.insert(datavec.end(), target_length - input.size(), pad_value);
+    } else {
+      for (unsigned i = 0; i < target_length; ++i) {
+        datavec.push_back(std::clamp((catch_infs(input[i], replace_inf_value) - center) * norm_factor, min, max));
+      }
     }
-    datavec.insert(datavec.end(), target_length - input.size(), pad_value);
-
     return target_length;
   }
 
