@@ -38,22 +38,13 @@ particleNetSonicTriton.toReplaceWith(pfParticleNetJetTags, _particleNetSonicJetT
     flav_names = pfParticleNetJetTags.flav_names,
 ))
 
-particleNetPTSonicTriton.toReplaceWith(pfParticleNetJetTags, _particleNetSonicJetTagsProducer.clone(
-    src = 'pfParticleNetTagInfos',
+(particleNetSonicTriton & particleNetPTSonicTriton).toModify(pfParticleNetJetTags,
     preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/General/V01/preprocess_PT.json',
-    Client = cms.PSet(
-        timeout = cms.untracked.uint32(300),
-        mode = cms.string("Async"),
-        modelName = cms.string("particlenet_PT"),
+    Client = dict(
+        modelName = "particlenet_PT",
         modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/particlenet_PT/config.pbtxt"),
-        modelVersion = cms.string(""),
-        verbose = cms.untracked.bool(False),
-        allowedTries = cms.untracked.uint32(0),
-        useSharedMemory = cms.untracked.bool(True),
-        compression = cms.untracked.string(""),
-    ),
-    flav_names = pfParticleNetJetTags.flav_names,
-))
+    )
+)
 
 pfMassDecorrelatedParticleNetJetTags = boostedJetONNXJetTagsProducer.clone(
     src = 'pfParticleNetTagInfos',
@@ -78,20 +69,13 @@ particleNetSonicTriton.toReplaceWith(pfMassDecorrelatedParticleNetJetTags, _part
     flav_names = pfMassDecorrelatedParticleNetJetTags.flav_names,
 ))
 
-particleNetPTSonicTriton.toReplaceWith(pfMassDecorrelatedParticleNetJetTags, _particleNetSonicJetTagsProducer.clone(
-    src = 'pfParticleNetTagInfos',
+(particleNetSonicTriton & particleNetPTSonicTriton).toModify(pfMassDecorrelatedParticleNetJetTags,
     preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/MD-2prong/V01/preprocess_PT.json',
-    Client = cms.PSet(
-        timeout = cms.untracked.uint32(300),
-        modelName = cms.string("particlenet_AK8_MD-2prong_PT"),
-        mode = cms.string("Async"),
+    Client = dict(
+        modelName = "particlenet_AK8_MD-2prong_PT",
         modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/particlenet_AK8_MD-2prong_PT/config.pbtxt"),
-        modelVersion = cms.string(""),
-        verbose = cms.untracked.bool(False),
-        allowedTries = cms.untracked.uint32(0),
-    ),
-    flav_names = pfMassDecorrelatedParticleNetJetTags.flav_names,
-))
+    )
+)
 
 pfParticleNetMassRegressionJetTags = boostedJetONNXJetTagsProducer.clone(
     src = 'pfParticleNetTagInfos',
@@ -115,20 +99,13 @@ particleNetSonicTriton.toReplaceWith(pfParticleNetMassRegressionJetTags, _partic
     flav_names = pfParticleNetMassRegressionJetTags.flav_names,
 ))
 
-particleNetPTSonicTriton.toReplaceWith(pfParticleNetMassRegressionJetTags, _particleNetSonicJetTagsProducer.clone(
-    src = 'pfParticleNetTagInfos',
-    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/MassRegression/V01/preprocess_PT.json',
-    Client = cms.PSet(
-        timeout = cms.untracked.uint32(300),
-        modelName = cms.string("particlenet_AK8_MassRegression_PT"),
-        mode = cms.string("Async"),
+(particleNetSonicTriton & particleNetPTSonicTriton).toModify(pfParticleNetMassRegressionJetTags,
+    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/MassRegression/V01/preprocess.json',
+    Client = dict(
+        modelName = "particlenet_AK8_MassRegression_PT",
         modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/particlenet_AK8_MassRegression_PT/config.pbtxt"),
-        modelVersion = cms.string(""),
-        verbose = cms.untracked.bool(False),
-        allowedTries = cms.untracked.uint32(0),
-    ),
-    flav_names = pfParticleNetMassRegressionJetTags.flav_names,
-))
+    )
+)
 
 from CommonTools.PileupAlgos.Puppi_cff import puppi
 from PhysicsTools.PatAlgos.slimming.primaryVertexAssociation_cfi import primaryVertexAssociation
