@@ -100,7 +100,7 @@ particleNetSonicTriton.toReplaceWith(pfParticleNetMassRegressionJetTags, _partic
 ))
 
 (particleNetSonicTriton & particleNetPTSonicTriton).toModify(pfParticleNetMassRegressionJetTags,
-    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/MassRegression/V01/preprocess.json',
+    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK8/MassRegression/V01/preprocess_PT.json',
     Client = dict(
         modelName = "particlenet_AK8_MassRegression_PT",
         modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/particlenet_AK8_MassRegression_PT/config.pbtxt"),

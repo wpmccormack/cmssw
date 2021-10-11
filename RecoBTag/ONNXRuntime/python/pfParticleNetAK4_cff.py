@@ -39,7 +39,7 @@ particleNetSonicTriton.toReplaceWith(pfParticleNetAK4JetTags, _particleNetSonicJ
 ))
 
 (particleNetSonicTriton & particleNetPTSonicTriton).toModify(pfParticleNetAK4JetTags,
-    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK4/CHS/V00/preprocess_PT.jso',
+    preprocess_json = 'RecoBTag/Combined/data/ParticleNetAK4/CHS/V00/preprocess_PT.json',
     Client = dict(
         modelName = "particlenet_AK4_PT",
         modelConfigPath = cms.FileInPath("HeterogeneousCore/SonicTriton/data/models/particlenet_AK4_PT/config.pbtxt"),
