@@ -122,6 +122,9 @@ PATJetProducer::PATJetProducer(const edm::ParameterSet &iConfig)
     : useUserData_(iConfig.exists("userData")), printWarning_(true) {
   // initialize configurables
   jetsToken_ = consumes<edm::View<reco::Jet>>(iConfig.getParameter<edm::InputTag>("jetSource"));
+
+  //std::cout<<"PATJetProducer jetsToken_ = "<<iConfig.getParameter<edm::InputTag>("jetSource")<<std::endl;
+
   embedCaloTowers_ = false;  // parameter is optional
   if (iConfig.exists("embedCaloTowers")) {
     embedCaloTowers_ = iConfig.getParameter<bool>("embedCaloTowers");
@@ -146,6 +149,9 @@ PATJetProducer::PATJetProducer(const edm::ParameterSet &iConfig)
   if (addGenJetMatch_)
     genJetToken_ =
         consumes<edm::Association<reco::GenJetCollection>>(iConfig.getParameter<edm::InputTag>("genJetMatch"));
+  
+  //std::cout<<"PATJetProducer addGenJetMatch_ = "<<iConfig.getParameter<bool>("addGenJetMatch")<<" embedGenJetMatch_ = "<<iConfig.getParameter<bool>("embedGenJetMatch")<<" genJetToken_ = "<<iConfig.getParameter<edm::InputTag>("genJetMatch")<<std::endl;
+
   addPartonJetMatch_ = iConfig.getParameter<bool>("addPartonJetMatch");
   //   partonJetToken_ = mayConsume<reco::SomePartonJetType>(iConfig.getParameter<edm::InputTag>( "partonJetSource" ));
   addJetCorrFactors_ = iConfig.getParameter<bool>("addJetCorrFactors");
@@ -446,6 +452,7 @@ void PATJetProducer::produce(edm::Event &iEvent, const edm::EventSetup &iSetup) 
         const edm::Ref<reco::GenJetCollection> &genBackRef(genjet);
         // make the FwdPtr
         edm::FwdRef<reco::GenJetCollection> genjetFwdRef(genForwardRef, genBackRef);
+	//std::cout<<"adding genJet ref to patJet"<<std::endl;
         ajet.setGenJetRef(genjetFwdRef);
       }  // leave empty if no match found
     }
@@ -525,6 +532,7 @@ void PATJetProducer::produce(edm::Event &iEvent, const edm::EventSetup &iSetup) 
     if (useUserData_) {
       userDataHelper_.add(ajet, iEvent, iSetup);
     }
+    //std::cout<<"adding a patJet now"<<std::endl;
     patJets->push_back(ajet);
   }
 

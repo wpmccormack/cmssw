@@ -2,6 +2,7 @@
 #include <iostream>
 
 PCaloHit::PCaloHit(float eEM, float eHad, float t, int i, uint16_t d) : myTime(t), myItra(i), myDepth(d) {
+  //std::cout<<"PCaloHit::PCaloHit t = "<<t<<" i = "<<i<<" d = "<<d<<std::endl;
   myEnergy = eEM + eHad;
   myEMFraction = (myEnergy <= 0.f ? 1.f : eEM / myEnergy);
 }

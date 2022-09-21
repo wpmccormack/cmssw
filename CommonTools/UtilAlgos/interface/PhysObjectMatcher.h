@@ -20,7 +20,7 @@
 #include "DataFormats/Common/interface/Association.h"
 #include "CommonTools/UtilAlgos/interface/MatchByDR.h"
 
-// #include <iostream>
+#include <iostream>
 
 namespace reco {
 
@@ -94,6 +94,7 @@ namespace reco {
     produces<MatchMap>();
     // set resolveByMatchQuality only if ambiguities are to be resolved
     resolveByMatchQuality_ = resolveByMatchQuality_ && resolveAmbiguities_;
+    //std::cout<<"src = "<<cfg.template getParameter<edm::InputTag>("src")<<" matched "<<cfg.template getParameter<edm::InputTag>("matched")<<std::endl;
   }
 
   template <typename C1, typename C2, typename S, typename D, typename Q>
@@ -101,6 +102,9 @@ namespace reco {
 
   template <typename C1, typename C2, typename S, typename D, typename Q>
   void PhysObjectMatcher<C1, C2, S, D, Q>::produce(edm::Event& evt, const edm::EventSetup&) {
+
+    //std::cout<<"entering PhysObjectMatcher"<<std::endl;
+
     using namespace edm;
     using namespace std;
     typedef std::pair<size_t, size_t> IndexPair;
@@ -113,6 +117,9 @@ namespace reco {
     // create product
     unique_ptr<MatchMap> matchMap(new MatchMap(matched));
     size_t size = cands->size();
+    
+    //std::cout<<"how many cands? "<<size<<std::endl;
+
     if (size != 0) {
       //
       // create helpers
@@ -130,6 +137,9 @@ namespace reco {
         if (!resolveByMatchQuality_)
           matchPairs.clear();
         // loop over target collection
+	
+	//std::cout<<"matched size = "<<matched->size()<<std::endl;
+
         for (size_t m = 0; m != matched->size(); ++m) {
           const T2& match = (*matched)[m];
           // check lock and preselection

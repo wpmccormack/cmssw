@@ -57,6 +57,8 @@ PFClusterProducer::PFClusterProducer(const edm::ParameterSet& conf)
   _rechitsLabel = consumes<reco::PFRecHitCollection>(conf.getParameter<edm::InputTag>("recHitsSource"));
   edm::ConsumesCollector cc = consumesCollector();
 
+  //std::cout<<"In PFClusterProducer"<<std::endl;
+
   //setup rechit cleaners
   const edm::VParameterSet& cleanerConfs = conf.getParameterSetVector("recHitCleaners");
   for (const auto& conf : cleanerConfs) {
@@ -133,11 +135,23 @@ void PFClusterProducer::produce(edm::Event& e, const edm::EventSetup& es) {
     cleaner->clean(rechits, mask);
   }
 
+
+
+
+
+
+
+
+
+
+
   // no seeding on these hits
   std::vector<bool> seedmask = mask;
   for (const auto& cleaner : _seedcleaners) {
     cleaner->clean(rechits, seedmask);
   }
+
+  //std::cout<<"PFClusterProducer rechits->size() = "<<rechits->size()<<std::endl;
 
   std::vector<bool> seedable(rechits->size(), false);
   _seedFinder->findSeeds(rechits, seedmask, seedable);

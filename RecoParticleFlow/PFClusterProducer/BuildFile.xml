@@ -18,6 +18,7 @@
 <use name="vdt_headers"/>
 <use name="rootmath"/>
 <use name="root"/>
+<use name="HeterogeneousCore/SonicTriton"/>
 <export>
   <lib name="1"/>
 </export>

@@ -47,14 +47,14 @@ double PFCluster::getDepthCorrection(double energy, bool isBelowPS, bool isHadro
 }
 
 void PFCluster::setLayer(PFLayer::Layer layer) {
-  // cout<<"calling PFCluster::setLayer "<<layer<<endl;
+  //cout<<"calling PFCluster::setLayer "<<layer<<endl;
   layer_ = layer;
   caloID_ = PFLayer::toCaloID(layer);
   // cout<<"done "<<caloID_<<endl;
 }
 
 PFLayer::Layer PFCluster::layer() const {
-  // cout<<"calling PFCluster::layer "<<caloID()<<" "<<PFLayer::fromCaloID( caloID() )<<endl;
+  //cout<<"calling PFCluster::layer "<<caloID()<<" "<<PFLayer::fromCaloID( caloID() )<<endl;
   if (layer_ != PFLayer::NONE)
     return layer_;
   return PFLayer::fromCaloID(caloID());

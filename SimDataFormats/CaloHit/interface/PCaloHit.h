@@ -2,6 +2,7 @@
 #define SimDataFormats_PCaloHit_H
 
 #include "SimDataFormats/EncodedEventId/interface/EncodedEventId.h"
+#include <iostream>
 
 // Persistent Calorimeter hit
 
@@ -30,7 +31,10 @@ public:
   double time() const { return myTime; }
 
   //Geant track number
-  int geantTrackId() const { return myItra; }
+  int geantTrackId() const {
+    //std::cout<<"PCaloHit geantTrackId = "<<myItra<<std::endl;
+    return myItra;
+  }
 
   //DetId where the Hit is recorded
   void setID(unsigned int id) { detId = id; }

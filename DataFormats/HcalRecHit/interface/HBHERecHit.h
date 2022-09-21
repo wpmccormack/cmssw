@@ -22,7 +22,8 @@ public:
         auxEnergy_(-1.0e21),
         auxHBHE_(0),
         auxPhase1_(0),
-        auxTDC_(0) {}
+        auxTDC_(0) {}//,
+    //parentPart_(0) {}
 
   constexpr HBHERecHit(const HcalDetId& id, float energy, float timeRising, float timeFalling = 0)
       : CaloRecHit(id, energy, timeRising),
@@ -32,7 +33,8 @@ public:
         auxEnergy_(-1.0e21),
         auxHBHE_(0),
         auxPhase1_(0),
-        auxTDC_(0) {}
+        auxTDC_(0) {}//,
+  //parentPart_(0) {}
 
   /// get the hit falling time
   constexpr inline float timeFalling() const { return timeFalling_; }
@@ -58,6 +60,11 @@ public:
   constexpr inline void setAuxTDC(const uint32_t aux) { auxTDC_ = aux; }
   constexpr inline uint32_t auxTDC() const { return auxTDC_; }
 
+  //constexpr inline void setParentPart(const uint32_t parent) { parentPart_ = parent; }
+  //constexpr inline uint32_t parentPart() const { return parentPart_; }
+  //void setParentPart(const uint32_t parent) { parentPart_ = parent; }
+  //uint32_t parentPart() const { return parentPart_; }
+
   // The following method returns "true" for "Plan 1" merged rechits
   bool isMerged() const;
 
@@ -77,6 +84,7 @@ private:
   uint32_t auxHBHE_;
   uint32_t auxPhase1_;
   uint32_t auxTDC_;
+  //uint32_t parentPart_;
 };
 
 std::ostream& operator<<(std::ostream& s, const HBHERecHit& hit);

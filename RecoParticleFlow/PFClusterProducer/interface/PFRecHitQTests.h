@@ -40,7 +40,10 @@ public:
 protected:
   double threshold_;
 
-  bool pass(const reco::PFRecHit& hit) { return hit.energy() > threshold_; }
+  bool pass(const reco::PFRecHit& hit) {
+    //std::cout<<"In PFRecHitQTestThreshold threshold_ = "<<threshold_<<" hit.energy() = "<<hit.energy()<<std::endl;
+    return hit.energy() > threshold_;
+  }
 };
 
 //
@@ -296,15 +299,20 @@ protected:
   bool test(unsigned aDETID, double energy, double time, bool& clean) {
     HcalDetId detid(aDETID);
 
+    //std::cout<<"in PFRecHitQTestHCALThresholdVsDepth, energy = "<<energy<<std::endl;
+
     for (unsigned int i = 0; i < thresholds_.size(); ++i) {
+      //std::cout<<"still in PFRecHitQTestHCALThresholdVsDepth, detid.depth() = "<<detid.depth()<<" depths_[i] = "<<depths_[i]<<" detid.subdet() = "<<detid.subdet()<<" detector_ = "<<detector_<<" thresholds_[i] = "<<thresholds_[i]<<std::endl;
       if (detid.depth() == depths_[i] && detid.subdet() == detector_) {
         if (energy < thresholds_[i]) {
+	  //std::cout<<"failed!"<<std::endl;
           clean = false;
           return false;
         }
         break;
       }
     }
+    //std::cout<<"I passed?"<<std::endl;
     return true;
   }
 };

@@ -1,5 +1,6 @@
 <lcgdict>
    <class name="HBHERecHit" ClassVersion="19">
+    <version ClassVersion="20" checksum="2625721500"/>
     <version ClassVersion="19" checksum="3024868190"/>
     <version ClassVersion="18" checksum="642851014"/>
     <version ClassVersion="17" checksum="4076697378"/>
@@ -9,6 +10,14 @@
     <version ClassVersion="13" checksum="1684878064"/>
     <version ClassVersion="12" checksum="3812633329"/>
     <version ClassVersion="10" checksum="3145355338"/>
+   </class>
+   <class name="HBHERecHitTruth" ClassVersion="16">
+    <version ClassVersion="16" checksum="823067900"/>
+    <version ClassVersion="15" checksum="514616367"/>
+    <version ClassVersion="14" checksum="3041195769"/>
+    <version ClassVersion="13" checksum="1811156437"/>
+    <version ClassVersion="12" checksum="2217074976"/>
+    <version ClassVersion="11" checksum="333344771"/>
    </class>
    <class name="HORecHit" ClassVersion="11">
     <version ClassVersion="11" checksum="1379911758"/>
@@ -51,6 +60,7 @@
    </class>
 
    <class name="std::vector<HBHERecHit>"/>
+   <class name="std::vector<HBHERecHitTruth>"/>
    <class name="std::vector<HORecHit>"/>
    <class name="std::vector<HFPreRecHit>"/>
    <class name="std::vector<HFRecHit>"/>
@@ -85,6 +95,8 @@
    <class name="edm::Wrapper<edm::SortedCollection<CastorRecHit,edm::StrictWeakOrdering<CastorRecHit> > >" />
    <class name="edm::Wrapper<edm::SortedCollection<HcalCalibRecHit,edm::StrictWeakOrdering<HcalCalibRecHit> > >" splitLevel="0"/>
    <class name="edm::Wrapper<edm::SortedCollection<HBHEChannelInfo,edm::StrictWeakOrdering<HBHEChannelInfo> > >" />
+
+   <class name="edm::Wrapper<std::vector<HBHERecHitTruth> >"/>
 
    <class name="edm::Wrapper<HcalSourcePositionData>"/>
 

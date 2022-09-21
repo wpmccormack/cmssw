@@ -1,4 +1,5 @@
 #include "DataFormats/HcalRecHit/interface/HBHERecHit.h"
+#include "DataFormats/HcalRecHit/interface/HBHERecHitTruth.h"
 #include "DataFormats/HcalRecHit/interface/HFPreRecHit.h"
 #include "DataFormats/HcalRecHit/interface/HFRecHit.h"
 #include "DataFormats/HcalRecHit/interface/HORecHit.h"

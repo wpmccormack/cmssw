@@ -214,6 +214,7 @@ void OscarMTProducer::globalEndJob(OscarMTMasterThread* masterThread) {
 
 void OscarMTProducer::beginRun(const edm::Run&, const edm::EventSetup& es) {
   edm::LogVerbatim("SimG4CoreApplication") << "OscarMTProducer::beginRun";
+  //std::cout<<"OscarMTProducer::beginRun"<<std::endl;
   auto token = edm::ServiceRegistry::instance().presentToken();
   m_handoff.runAndWait([this, &es, token]() {
     edm::ServiceRegistry::Operate guard{token};
@@ -237,13 +238,19 @@ void OscarMTProducer::endRun(const edm::Run&, const edm::EventSetup&) {
 }
 
 void OscarMTProducer::produce(edm::Event& e, const edm::EventSetup& es) {
+
+  //std::cout<<"in OscarMTProducer::produce"<<std::endl;
+
   StaticRandomEngineSetUnset random(e.streamID());
   auto engine = random.currentEngine();
   edm::LogVerbatim("SimG4CoreApplication") << "Produce event " << e.id() << " stream " << e.streamID();
+  //std::cout<<"SimG4CoreApplication Produce event "<< e.id() << " stream " << e.streamID() <<std::endl;
   //edm::LogVerbatim("SimG4CoreApplication") << " rand= " << G4UniformRand();
 
   auto& sTk = m_runManagerWorker->sensTkDetectors();
   auto& sCalo = m_runManagerWorker->sensCaloDetectors();
+
+  //std::cout<<"assigned sCalo"<<std::endl;
 
   std::unique_ptr<G4SimEvent> evt;
   auto token = edm::ServiceRegistry::instance().presentToken();
@@ -253,10 +260,14 @@ void OscarMTProducer::produce(edm::Event& e, const edm::EventSetup& es) {
     evt = m_runManagerWorker->produce(e, es, globalCache()->runManagerMaster());
   });
 
+  //std::cout<<"did the sim just happen?"<<std::endl;
+
   std::unique_ptr<edm::SimTrackContainer> p1(new edm::SimTrackContainer);
   std::unique_ptr<edm::SimVertexContainer> p2(new edm::SimVertexContainer);
   evt->load(*p1);
   evt->load(*p2);
+
+  //std::cout<<"loaded track and vertex"<<std::endl;
 
   e.put(std::move(p1));
   e.put(std::move(p2));
@@ -276,8 +287,15 @@ void OscarMTProducer::produce(edm::Event& e, const edm::EventSetup& es) {
     for (auto& name : v) {
       std::unique_ptr<edm::PCaloHitContainer> product(new edm::PCaloHitContainer);
       calo->fillHits(*product, name);
-      if (product != nullptr && !product->empty())
+      if (product != nullptr && !product->empty()){
+	//std::cout<<"SimG4CoreApplication Produced " << product->size() << " calo hits <" << name << ">"<<std::endl;
         edm::LogVerbatim("SimG4CoreApplication") << "Produced " << product->size() << " calo hits <" << name << ">";
+	//if(name == "HcalHits"){
+	  //for( unsigned int pr = 0; pr < product->size(); pr++ ){
+	  //std::cout<<"product geantTrackId() = "<<product->at(pr).geantTrackId()<<" hit.id() = "<<product->at(pr).id()<<" : Energy (EM) " << product->at(pr).energyEM() << " GeV : Energy (Had) " << product->at(pr).energyHad() << " GeV : Tof " << product->at(pr).time() << " ns and Geant track #" << product->at(pr).geantTrackId() << " Encoded depth " << product->at(pr).depth()<<std::endl;
+	    //}
+	//}
+      }
       e.put(std::move(product), name);
     }
   }

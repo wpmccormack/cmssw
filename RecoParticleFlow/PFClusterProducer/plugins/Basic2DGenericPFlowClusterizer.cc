@@ -134,6 +134,7 @@ Basic2DGenericPFlowClusterizer::Basic2DGenericPFlowClusterizer(const edm::Parame
 void Basic2DGenericPFlowClusterizer::buildClusters(const reco::PFClusterCollection& input,
                                                    const std::vector<bool>& seedable,
                                                    reco::PFClusterCollection& output) {
+  //std::cout<<"in Basic2DGenericPFlowClusterizer buildClusters"<<std::endl;
   reco::PFClusterCollection clustersInTopo;
   for (const auto& topocluster : input) {
     clustersInTopo.clear();

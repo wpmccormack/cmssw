@@ -325,6 +325,7 @@ bool GenParticleProducer::convertParticle(reco::GenParticle& cand,
   cand.setStatus(part->status());
   cand.setP4(p4);
   cand.setCollisionId(0);
+  //std::cout<<"In GenParticleProducer::convertParticle, pdgId = "<<pdgId<<std::endl;
   const GenVertex* v = part->production_vertex();
   if (v != nullptr) {
     ThreeVector vtx = v->point3d();
@@ -344,6 +345,7 @@ bool GenParticleProducer::fillDaughters(reco::GenParticleCollection& cands,
                                         std::unordered_map<int, size_t>& barcodes) const {
   const GenVertex* productionVertex = part->production_vertex();
   size_t numberOfMothers = productionVertex->particles_in_size();
+  //std::cout<<"I'm in GenParticleProducer::fillDaughters. numberOfMothers = "<<numberOfMothers<<std::endl;
   if (numberOfMothers > 0) {
     GenVertex::particles_in_const_iterator motherIt = productionVertex->particles_in_const_begin();
     for (; motherIt != productionVertex->particles_in_const_end(); motherIt++) {
@@ -373,6 +375,7 @@ bool GenParticleProducer::fillIndices(const HepMC::GenEvent* mc,
     particles[idx] = particle;
     barCodeVector[idx] = barCode;
     barcodes.insert(make_pair(barCode_this_event, idx++));
+    //std::cout<<"I'm in GenParticleProducer::fillIndices.  barCode = "<<barCode<<std::endl;
   }
   return true;
 }

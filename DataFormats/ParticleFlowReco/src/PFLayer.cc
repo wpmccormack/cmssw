@@ -36,7 +36,7 @@ CaloID PFLayer::toCaloID(Layer layer) {
 }
 
 PFLayer::Layer PFLayer::fromCaloID(const CaloID& id) {
-  //  cout<<"PFLayer::fromCaloID "<<id<<" "<<id.detector()<<endl;
+  //cout<<"PFLayer::fromCaloID "<<id<<" "<<id.detector()<<endl;
   if (!id.isSingleDetector()) {
     edm::LogError("PFLayer") << "cannot convert " << id
                              << " to a layer, as this CaloID does not correspond to a single detector";

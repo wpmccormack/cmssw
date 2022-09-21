@@ -366,6 +366,7 @@ void HcalDigitizer::accumulateCaloHits(edm::Handle<std::vector<PCaloHit>> const 
 
     // eliminate bad hits
     for (unsigned int i = 0; i < hcalHitsOrig.size(); i++) {
+      //std::cout<<"in HcalDigitizer::accumulateCaloHits.  id = "<<hcalHitsOrig[i].id()<<std::endl;
       DetId id(hcalHitsOrig[i].id());
       HcalDetId hid(id);
       if (!htopoP->validHcal(hid)) {

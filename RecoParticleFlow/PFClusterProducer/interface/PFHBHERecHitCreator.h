@@ -45,6 +45,7 @@ public:
       auto energy = erh.energy();
       auto time = erh.time();
       auto depth = detid.depth();
+      //std::cout<<"in PFHBHERecHitCreator energy = "<<energy<<" time = "<<time<<" depth = "<<depth<<" esd = "<<detid.subdet()<<std::endl;
 
       std::shared_ptr<const CaloCellGeometry> thisCell = nullptr;
       PFLayer::Layer layer = PFLayer::HCAL_BARREL1;

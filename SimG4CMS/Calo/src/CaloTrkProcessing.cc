@@ -182,6 +182,21 @@ void CaloTrkProcessing::update(const G4Step* aStep) {
     throw cms::Exception("Unknown", "CaloTrkProcessing") << "cannot get trkInfo for Track " << id << "\n";
   }
 
+  //std::cout<<"is doFineCalo_ defined? "<<doFineCalo_<<std::endl;
+  /*
+  if (doFineCalo_){
+    // Store current momentum whenever a secondary is created in the trkInfo
+    const std::vector<const G4Track*>* secondaries = aStep->GetSecondaryInCurrentStep();
+    for(unsigned int i=0; i < secondaries->size(); i++){
+      const G4Track* secondary = secondaries->operator[](i);
+      trkInfo->insertMomentumAtCreationSecondary(secondary, theTrack);
+    }
+    }*/ //WPM
+
+  //std::cout<< "Putting in history:"<< " Track " << id<< " vertex[cm]=("<< theTrack->GetVertexPosition().x() / CLHEP::cm << ","<< theTrack->GetVertexPosition().y() / CLHEP::cm << ","<< theTrack->GetVertexPosition().z() / CLHEP::cm << ")"<< " position[cm]=("<< theTrack->GetPosition().x() / CLHEP::cm << ","<< theTrack->GetPosition().y() / CLHEP::cm << ","<< theTrack->GetPosition().z() / CLHEP::cm << ")"<< " energy[GeV]=" << theTrack->GetKineticEnergy() / CLHEP::GeV<< " getIDfineCalo=" << trkInfo->getIDfineCalo()<< " getIDonCaloSurface=" << trkInfo->getIDonCaloSurface()<< " parentID=" << theTrack->GetParentID()<<std::endl;
+  //std::cout<< "Putting in history:"<< " Track " << id<< " vertex[cm]=("<< theTrack->GetVertexPosition().x() / CLHEP::cm << ","<< theTrack->GetVertexPosition().y() / CLHEP::cm << ","<< theTrack->GetVertexPosition().z() / CLHEP::cm << ")"<< " position[cm]=("<< theTrack->GetPosition().x() / CLHEP::cm << ","<< theTrack->GetPosition().y() / CLHEP::cm << ","<< theTrack->GetPosition().z() / CLHEP::cm << ")"<< " energy[GeV]=" << theTrack->GetKineticEnergy() / CLHEP::GeV<< " parentID=" << theTrack->GetParentID()<<std::endl;
+
+
   if (doFineCalo_) {
     int prestepLV = isItCalo(aStep->GetPreStepPoint()->GetTouchable(), fineDetectors_);
     int poststepLV = isItCalo(aStep->GetPostStepPoint()->GetTouchable(), fineDetectors_);

@@ -120,7 +120,7 @@ namespace HcalDigiAnalyzerImpl {
     edm::Handle<Collection> digis;
     e.getByLabel(tag, digis);
     for (unsigned i = 0; i < digis->size(); ++i) {
-      std::cout << (*digis)[i] << std::endl;
+      //std::cout << (*digis)[i] << std::endl;
       statistics.analyze((*digis)[i]);
     }
   }

@@ -85,5 +85,12 @@ void PFMultiDepthClusterProducer::produce(edm::Event& e, const edm::EventSetup& 
   if (_energyCorrector) {
     _energyCorrector->correctEnergies(*pfClusters);
   }
+  
+  //std::cout<<"Number of PFMultiDepthClusterProducer clusters = "<<pfClusters->size()<<std::endl;
+
+  //for(unsigned int c = 0; c < pfClusters->size(); c++){
+  //std::cout<<"PFMultiDepthClusterProducer cluster energy = "<<pfClusters->at(c).energy()<<std::endl;
+  //}
+
   e.put(std::move(pfClusters));
 }

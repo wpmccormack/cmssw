@@ -91,6 +91,9 @@ PFMultiDepthClusterizer::PFMultiDepthClusterizer(const edm::ParameterSet& conf, 
 void PFMultiDepthClusterizer::buildClusters(const reco::PFClusterCollection& input,
                                             const std::vector<bool>& seedable,
                                             reco::PFClusterCollection& output) {
+
+  //std::cout<<"HI I'M IN PFMultiDepthClusterizer::buildClusters and input.size() = "<<input.size()<<std::endl;
+
   std::vector<double> etaRMS2(input.size(), 0.0);
   std::vector<double> phiRMS2(input.size(), 0.0);
 
@@ -123,6 +126,7 @@ void PFMultiDepthClusterizer::buildClusters(const reco::PFClusterCollection& inp
       continue;
     //if not linked just spit it out
     if (!linked[i]) {
+      //std::cout<<"UNLINKED in PFMultiDepthClusterizer, cluster energy, time, layer, depth, positionREP.x, positionREP.y, positionREP.z = "<<input[i].energy()<<" "<<input[i].time()<<" "<<input[i].layer()<<" "<<input[i].depth()<<" "<<input[i].positionREP().X()<<" "<<input[i].positionREP().Y()<<" "<<input[i].positionREP().Z()<<std::endl;
       output.push_back(input[i]);
       //      printf("Added single cluster with energy =%f \n",input[i].energy());
       mask[i] = true;
@@ -132,8 +136,11 @@ void PFMultiDepthClusterizer::buildClusters(const reco::PFClusterCollection& inp
     //now business: if  linked and not  masked gather clusters
     reco::PFCluster cluster = input[i];
     mask[i] = true;
+    //std::cout<<"PRIOR to expand, cluster energy, time, layer, depth, positionREP.x, positionREP.y, positionREP.z = "<<cluster.energy()<<" "<<cluster.time()<<" "<<cluster.layer()<<" "<<cluster.depth()<<" "<<cluster.positionREP().X()<<" "<<cluster.positionREP().Y()<<" "<<cluster.positionREP().Z()<<std::endl;
     expandCluster(cluster, i, mask, input, prunedLinks);
+    //std::cout<<"AFTER to expand, cluster energy, time, layer, depth, positionREP.x, positionREP.y, positionREP.z = "<<cluster.energy()<<" "<<cluster.time()<<" "<<cluster.layer()<<" "<<cluster.depth()<<" "<<cluster.positionREP().X()<<" "<<cluster.positionREP().Y()<<" "<<cluster.positionREP().Z()<<std::endl;
     _allCellsPosCalc->calculateAndSetPosition(cluster);
+    //std::cout<<"in PFMultiDepthClusterizer, cluster energy, time, layer, depth, positionREP.x, positionREP.y, positionREP.z = "<<cluster.energy()<<" "<<cluster.time()<<" "<<cluster.layer()<<" "<<cluster.depth()<<" "<<cluster.positionREP().X()<<" "<<cluster.positionREP().Y()<<" "<<cluster.positionREP().Z()<<std::endl;
     output.push_back(cluster);
     //    printf("Added linked cluster with energy =%f\n",cluster.energy());
   }
