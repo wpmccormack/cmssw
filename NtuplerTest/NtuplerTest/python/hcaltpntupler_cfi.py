@@ -21,6 +21,14 @@ simHcalTriggerPrimitiveNtupleReco = cms.EDProducer("HcalTrigPrimDigiNtupler",
     clus_src = cms.InputTag("printTheDetIDsReco","HBHERecHitTruth")
 )
 
+simHcalTriggerPrimitiveNtupleWithRadialCutoff = cms.EDProducer("HcalTrigPrimDigiNtupler",
+    clus_src = cms.InputTag("printTheDetIDsWithRadialCutoff","HBHERecHitTruth")
+)
+
+simHcalTriggerPrimitiveNtupleRecoWithRadialCutoff = cms.EDProducer("HcalTrigPrimDigiNtupler",
+    clus_src = cms.InputTag("printTheDetIDsRecoWithRadialCutoff","HBHERecHitTruth")
+)
+
 #,
 """                                             
   GenInfo = cms.untracked.PSet(
