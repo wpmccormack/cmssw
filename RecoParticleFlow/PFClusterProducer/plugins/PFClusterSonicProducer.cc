@@ -167,7 +167,7 @@ void PFClusterSonicProducer::beginLuminosityBlock(const edm::LuminosityBlock& lu
 //void PFClusterSonicProducer::produce(edm::Event& e, const edm::EventSetup& es) {
 void PFClusterSonicProducer::acquire(edm::Event const &iEvent, edm::EventSetup const &iSetup, Input &iInput) {
   client_->setBatchSize(1);
-  //std::cout<<"SONIC HELLO I'M IN PFClusterSonicProducer::acquire"<<std::endl;
+  std::cout<<"SONIC HELLO I'M IN PFClusterSonicProducer::acquire"<<std::endl;
   //_initialClustering->reset();
   //if (_pfClusterBuilder)
   //_pfClusterBuilder->reset();
@@ -178,7 +178,7 @@ void PFClusterSonicProducer::acquire(edm::Event const &iEvent, edm::EventSetup c
 
   //_initialClustering->updateEvent(iEvent);
 
-  //std::cout<<"SONIC rechits->size() = "<<rechits->size()<<std::endl;
+  std::cout<<"SONIC rechits->size() = "<<rechits->size()<<std::endl;
   std::vector<bool> mask(rechits->size(), true);
   //for (const auto& cleaner : _cleaners) {
   //cleaner->clean(rechits, mask);
@@ -199,7 +199,7 @@ void PFClusterSonicProducer::acquire(edm::Event const &iEvent, edm::EventSetup c
     }
     nhits2_++;
   }
-  //std::cout<<"SONIC in PFClusterSonicProducer::acquire, what is nhits2_? = "<<nhits2_<<std::endl;
+  std::cout<<"SONIC in PFClusterSonicProducer::acquire, what is nhits2_? = "<<nhits2_<<std::endl;
   if(nhits2_ < 1) return;
   auto &input = iInput.at("INPUT0");
   input.setShape(0, nhits2_);
@@ -220,11 +220,21 @@ void PFClusterSonicProducer::acquire(edm::Event const &iEvent, edm::EventSetup c
     pfdata.push_back(rechits->at(i).energy());
     pfdata.push_back(rechits->at(i).positionREP().eta());
     pfdata.push_back(rechits->at(i).positionREP().phi());
+    pfdata.push_back(rechits->at(i).time());
+    //pfdata.push_back( sqrt(rechits->at(i).position().x()*rechits->at(i).position().x() + rechits->at(i).position().y()*rechits->at(i).position().y() ) );
+    //pfdata.push_back( 2. * atan( exp(-1. * rechits->at(i).positionREP().eta() ) ) );
+    pfdata.push_back( 2. * atan( exp(-1. * rechits->at(i).positionREP().eta() ) ) );
+    pfdata.push_back( sqrt(rechits->at(i).position().x()*rechits->at(i).position().x() + rechits->at(i).position().y()*rechits->at(i).position().y() ) );
+    pfdata.push_back(rechits->at(i).depth());
     //pfdata.push_back(rechits->at(i).time());
     h++;
   }
 
+  std::cout<<"about to send data to server"<<std::endl;
+
   input.toServer(tdata);
+
+  std::cout<<"sent data to server"<<std::endl;
   /*
   std::vector<bool> seedable(rechits->size(), false);
   _seedFinder->findSeeds(rechits, seedmask, seedable);
@@ -260,7 +270,7 @@ void PFClusterSonicProducer::acquire(edm::Event const &iEvent, edm::EventSetup c
 
 
 void PFClusterSonicProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) {
-  //std::cout<<"in PFClusterSonicProducer::produce"<<std::endl;
+  std::cout<<"in PFClusterSonicProducer::produce.  nhits2_ = "<<nhits2_<<std::endl;
   edm::Handle<reco::PFRecHitCollection> rechits;
   iEvent.getByToken(_rechitsLabel, rechits);
 
@@ -268,11 +278,13 @@ void PFClusterSonicProducer::produce(edm::Event& iEvent, edm::EventSetup const& 
   const auto& output1 = iOutput.begin()->second;
   const auto& outputs = output1.fromServer<float>();
 
-  std::map<int, reco::PFCluster> cluster_map; //map keys = cluster index from SPVCNN and values = clusters that may be added to
+  //std::map<int, reco::PFCluster> cluster_map; //map keys = cluster index from SPVCNN and values = clusters that may be added to
+  std::map<int, std::vector<reco::PFCluster>> cluster_map; //map keys = cluster index from SPVCNN and values = clusters that may be added to
 
   auto pfClusters = std::make_unique<reco::PFClusterCollection>();
   for (int i = 0; i < nhits2_; ++i) {
-    //std::cout<<"SONIC outputs[0]["<<i<<"] = "<<outputs[0][i]<<" while x = "<<rechits->at(i).position().x()<<" y = "<<rechits->at(i).position().y()<<" z = "<<rechits->at(i).position().z()<<" energy = "<<rechits->at(i).energy()<<" eta = "<<rechits->at(i).positionREP().eta()<<" phi = "<<rechits->at(i).positionREP().phi()<<" and time = "<<rechits->at(i).time()<<std::endl;
+    std::cout<<"SONIC outputs[0]["<<i<<"] = "<<outputs[0][i]<<" while x = "<<rechits->at(i).position().x()<<" y = "<<rechits->at(i).position().y()<<" z = "<<rechits->at(i).position().z()<<" energy = "<<rechits->at(i).energy()<<" eta = "<<rechits->at(i).positionREP().eta()<<" phi = "<<rechits->at(i).positionREP().phi()<<" and time = "<<rechits->at(i).time()<<std::endl;
+
     reco::PFCluster current;
     auto ref = makeRefhit(rechits, i); //reco::PFRecHitRef(h, i);
     current.addRecHitFraction(reco::PFRecHitFraction(ref, 1));
@@ -286,13 +298,72 @@ void PFClusterSonicProducer::produce(edm::Event& iEvent, edm::EventSetup const& 
     current.calculatePositionREP();
     current.setDepth(ref->depth());
 
-    //std::cout<<"cluster got seed = "<<ref->detId()<<" energy = "<<rh_energy<<" time = "<<ref->time()<<" layer = "<<ref->layer()<<" position "<<ref->position().x()<<", "<<ref->position().y()<<", "<<ref->position().z()<<" depth = "<<ref->depth()<<std::endl;
+    std::cout<<"cluster got seed = "<<ref->detId()<<" energy = "<<rh_energy<<" time = "<<ref->time()<<" layer = "<<ref->layer()<<" position "<<ref->position().x()<<", "<<ref->position().y()<<", "<<ref->position().z()<<" depth = "<<ref->depth()<<std::endl;
 
     if( !cluster_map.count( outputs[0][i] ) ){ //new cluster index
-      cluster_map[outputs[0][i]] = current;
-      //std::cout<<"NEW cluster "<<outputs[0][i]<<std::endl;
+      cluster_map[outputs[0][i]].push_back(current);
+      std::cout<<"NEW cluster "<<outputs[0][i]<<std::endl;
     } else{ //code for combining clusters taken from PFMultiDepthClusterizer
-      //std::cout<<"EXISTING cluster "<<outputs[0][i]<<std::endl;
+      std::cout<<"EXISTING cluster "<<outputs[0][i]<<std::endl;
+
+
+      bool newCluster = true;
+      unsigned int theClusterIndex = 0;
+      for(unsigned int cs = 0; cs < cluster_map[outputs[0][i]].size(); cs++){
+        double deleta = (cluster_map[outputs[0][i]].at(cs).eta() - current.eta());
+        double delphi, ogphi, newphi;
+        newphi = current.phi();
+        ogphi = cluster_map[outputs[0][i]].at(cs).phi();
+        if(newphi < 0){
+          newphi = newphi + 6.28319;
+        }
+        if(ogphi < 0){
+          ogphi = ogphi + 6.28319;
+        }
+	delphi = abs(newphi - ogphi);
+        if(delphi > 3.14159){
+          delphi = 3.14159 - std::fmod(delphi, 3.14159);
+        }
+	std::cout<<"delta eta = "<<deleta<<" and delta phi = "<<delphi<<std::endl;
+        double deltaR = sqrt( deleta*deleta + delphi*delphi );
+	std::cout<<"delta eta = "<<deleta<<" and delta phi = "<<delphi<<" so deltaR = "<<deltaR<<std::endl;
+        if(deltaR < 1.){
+          newCluster=false;
+          theClusterIndex = cs;
+          break;
+        }
+      }
+
+      if(newCluster){
+        cluster_map[outputs[0][i]].push_back(current);
+	std::cout<<"ANOTHER NEW cluster "<<outputs[0][i]<<std::endl;
+      }
+
+      else{
+        double e1 = 0.0;
+        double e2 = 0.0;
+	reco::PFCluster main = cluster_map[outputs[0][i]].at(theClusterIndex);
+        for (const auto& fraction : main.recHitFractions()){
+          if (fraction.recHitRef()->detId() == main.seed()) {
+            e1 = fraction.recHitRef()->energy();
+          }
+        }
+        for (const auto& fraction : current.recHitFractions()) {
+          main.addRecHitFraction(fraction);
+          if (fraction.recHitRef()->detId() == current.seed()) {
+            e2 = fraction.recHitRef()->energy();
+          }
+        }
+        if (e2 > e1){
+          main.setSeed(current.seed());
+        }
+        _allCellsPosCalc->calculateAndSetPosition(main);
+	cluster_map[outputs[0][i]].at(theClusterIndex) = main;
+      }
+
+    }
+
+    /*
       double e1 = 0.0;
       double e2 = 0.0;
       reco::PFCluster main = cluster_map[outputs[0][i]];
@@ -315,24 +386,33 @@ void PFClusterSonicProducer::produce(edm::Event& iEvent, edm::EventSetup const& 
       }
       //std::cout<<"main energy = "<<main.energy()<<std::endl;
       cluster_map[outputs[0][i]] = main;
-    }
+      */
+  }
 
     //pfClusters->push_back(current);
     //pfClusters->push_back(&rechits->at(i));
-  }
-
+  //}
+  
   //for (it = cluster_map.begin(); it != cluster_map.end(); it++){
+  //for (auto const& cl : cluster_map){
+  //std::cout<<"soniccluster energy = "<<cl.second.energy()<<std::endl;
+  //_allCellsPosCalc->calculateAndSetPosition(cluster_map[cl.first]);
+  //  //std::cout<<"did i recalibrate the energy? energy = "<<cl.second.energy()<<std::endl;
+  //  //std::cout<<"adding a cluster at layer "<<cl.second.layer()<<" with energy "<<cl.second.energy()<<std::endl;
+  //  if(cl.second.energy() > 0){
+  //    pfClusters->push_back(cl.second);
+  //  }
+  //}
   for (auto const& cl : cluster_map){
-    //std::cout<<"soniccluster energy = "<<cl.second.energy()<<std::endl;
-    _allCellsPosCalc->calculateAndSetPosition(cluster_map[cl.first]);
-    //std::cout<<"did i recalibrate the energy? energy = "<<cl.second.energy()<<std::endl;
-    //std::cout<<"adding a cluster at layer "<<cl.second.layer()<<" with energy "<<cl.second.energy()<<std::endl;
-    if(cl.second.energy() > 0){
-      pfClusters->push_back(cl.second);
+    for(unsigned int cs2 = 0; cs2 < cluster_map[cl.first].size(); cs2++){
+      _allCellsPosCalc->calculateAndSetPosition(cluster_map[cl.first].at(cs2));
+      if(cl.second.at(cs2).energy() > 0){
+	pfClusters->push_back(cl.second.at(cs2));
+      }
     }
   }
 
-  //std::cout<<"SONIC sonicclusters size = "<<pfClusters->size()<<std::endl;
+  std::cout<<"SONIC sonicclusters size = "<<pfClusters->size()<<std::endl;
   iEvent.put(std::move(pfClusters));
 
   // outputs are px and py
