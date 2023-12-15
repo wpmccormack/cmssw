@@ -15,6 +15,14 @@
   <use name="Geometry/CaloTopology"/>
   <use name="Geometry/Records"/>
   <use name="RecoParticleFlow/PFClusterProducer"/>
+  <use name="HeterogeneousCore/SonicTriton"/>
+  <use   name="SimCalorimetry/HcalSimAlgos"/>
+  <use   name="SimCalorimetry/CaloSimAlgos"/>
+  <use   name="SimDataFormats/GeneratorProducts"/>
+  <use   name="SimDataFormats/PileupSummaryInfo"/>
+  <use   name="SimDataFormats/Track"/>
+  <use   name="SimDataFormats/Vertex"/>
+  <use   name="SimDataFormats/CaloHit"/>
   <flags EDM_PLUGIN="1"/>
 </library>
 
@@ -36,5 +44,6 @@
   <use name="Geometry/Records"/>
   <use name="RecoLocalCalo/HGCalRecProducers"/>
   <use name="RecoParticleFlow/PFClusterProducer"/>
+  <use name="HeterogeneousCore/SonicTriton"/>
   <flags EDM_PLUGIN="1"/>
 </library>
