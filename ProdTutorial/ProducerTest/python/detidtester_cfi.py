@@ -24,3 +24,33 @@ printTheDetIDsReco = cms.EDProducer("ProducerTest",
     pf_src = cms.InputTag( "hbhereco" ),
     clus_src = cms.InputTag("particleFlowClusterHCAL")
 )
+
+
+printTheDetIDsWithRadialCutoff = cms.EDProducer("ProducerTestWithRadialCutoff",
+    #pf_src = cms.InputTag( "hbheprereco" ),
+    #pf_src = cms.InputTag( "hltParticleFlowRecHitHBHE" ),
+    pf_src = cms.InputTag( "hltHbhereco" ),
+    clus_src = cms.InputTag("hltParticleFlowClusterHCAL")
+)
+
+printTheDetIDsRecoWithRadialCutoff = cms.EDProducer("ProducerTestWithRadialCutoff",
+    pf_src = cms.InputTag( "hbhereco" ),
+    clus_src = cms.InputTag("particleFlowClusterHCAL")
+)
+
+printTheDetIDsRecoWithRadialCutoffECAL = cms.EDProducer("ProducerTestWithRadialCutoff_ECAL",
+    pf_src = cms.InputTag( "hbhereco" ),
+    clus_src = cms.InputTag("particleFlowClusterECAL")
+)
+
+printTheDetIDsWithRadialCutoffEXPANDEDINFO = cms.EDProducer("ProducerTestWithRadialCutoffEXPANDEDINFO",
+    #pf_src = cms.InputTag( "hbheprereco" ),
+    #pf_src = cms.InputTag( "hltParticleFlowRecHitHBHE" ),
+    pf_src = cms.InputTag( "hltHbhereco" ),
+    clus_src = cms.InputTag("hltParticleFlowClusterHCAL")
+)
+
+printTheDetIDsRecoWithRadialCutoffEXPANDEDINFO = cms.EDProducer("ProducerTestWithRadialCutoffEXPANDEDINFO",
+    pf_src = cms.InputTag( "hbhereco" ),
+    clus_src = cms.InputTag("particleFlowClusterHCAL")
+)
